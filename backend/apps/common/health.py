@@ -6,6 +6,8 @@ from django.db import connections
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.views.decorators.http import require_GET
 
+from .context import current_request_id
+from .responses import success
 from .storage import minio_health
 
 
@@ -18,7 +20,10 @@ def health(request: HttpRequest) -> HttpResponse:
         "minio": minio_health(),
     }
     return JsonResponse(
-        {"status": statuses, "ok": all(value == "up" for value in statuses.values())}
+        success(
+            {"status": statuses, "ok": all(value == "up" for value in statuses.values())},
+            current_request_id(),
+        )
     )
 
 

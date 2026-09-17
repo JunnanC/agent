@@ -9,6 +9,9 @@ class ConfigurationError(RuntimeError):
     pass
 
 
+_PLACEHOLDER_VALUES = {"change-me", "changeme", "replace-me"}
+
+
 @dataclass(frozen=True)
 class MinIOConfig:
     endpoint: str
@@ -25,6 +28,8 @@ def require_str(name: str) -> str:
     value = os.environ.get(name)
     if value is None or not value.strip():
         raise ConfigurationError(f"Missing required environment variable: {name}")
+    if value.strip().lower() in _PLACEHOLDER_VALUES:
+        raise ConfigurationError(f"Environment variable {name} contains a placeholder value")
     return value
 
 

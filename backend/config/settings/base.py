@@ -20,6 +20,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "apps.common.middleware.RequestTraceMiddleware",
     "django.middleware.common.CommonMiddleware",
 ]
 
@@ -71,6 +72,7 @@ CELERY_ENABLE_UTC = True
 
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
+    "EXCEPTION_HANDLER": "apps.common.errors.drf_exception_handler",
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
@@ -82,3 +84,10 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 MINIO = ENV["MINIO"]
+
+COMMON_PRINCIPAL_PERMISSION_PROVIDER = ""
+COMMON_AUDITABLE_ACTOR_PROVIDER = ""
+COMMON_IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60
+COMMON_OUTBOX_BATCH_SIZE = 100
+COMMON_AUDIT_EXPORT_MAX_RECORDS = 100_000
+COMMON_AUDIT_EXPORT_TTL_SECONDS = 24 * 60 * 60

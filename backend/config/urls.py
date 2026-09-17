@@ -1,7 +1,8 @@
-from django.urls import path
+from django.urls import include, path
 
 from apps.common.health import health
 
 urlpatterns = [
     path("admin/health", health),
+    path("admin/", include("apps.common.urls")),
 ]

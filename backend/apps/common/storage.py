@@ -39,9 +39,11 @@ def presign_upload(bucket: str, object_key: str) -> str:
     )
 
 
-def presign_download(bucket: str, object_key: str) -> str:
+def presign_download(
+    bucket: str, object_key: str, *, expires_in: int = MINIO_PRESIGN_EXPIRE_SECONDS
+) -> str:
     return minio_client().generate_presigned_url(
         "get_object",
         Params={"Bucket": bucket, "Key": object_key},
-        ExpiresIn=MINIO_PRESIGN_EXPIRE_SECONDS,
+        ExpiresIn=expires_in,
     )

@@ -22,24 +22,5 @@ _TEST_ENV = {
     "MINIO_EXPORT_BUCKET": "export",
 }
 
-for _name, _value in _TEST_ENV.items():
-    os.environ.setdefault(_name, _value)
-
-from .base import *  # noqa: E402
-
-ALLOWED_HOSTS = ["testserver"]
-DEBUG = False
-
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": ":memory:",
-    }
-}
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "common-test",
-    }
-}
-CELERY_TASK_ALWAYS_EAGER = True
+for key, value in _TEST_ENV.items():
+    os.environ.setdefault(key, value)
