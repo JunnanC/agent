@@ -56,7 +56,7 @@
 - [x] Git 历史中不存在真实 `.env`、密钥或证书文件名（验证：`git log --all --name-only` 检查）
 - [x] 示例环境变量均为明显假的占位值（验证：检查三份 `.env.example`）
 
-## 验收记录（2026-09-17 16:54:25 CST）
+## 验收记录（2026-09-17 17:07:42 CST）
 
 - 健康检查返回：`{"status":{"api":"up","mysql":"up","redis":"up","minio":"up"},"ok":true}`。
 - MySQL 验证返回：`InnoDB`、`utf8mb4`、`utf8mb4_0900_ai_ci`、UTC `+00:00`。
