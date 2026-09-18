@@ -49,6 +49,7 @@ def test_load_provider_instantiates_class_from_settings() -> None:
     assert principal_permission("1", "me").scope == "SELF"
 
 
+@override_settings(COMMON_PRINCIPAL_PERMISSION_PROVIDER="")
 def test_missing_principal_permission_provider_returns_internal_error() -> None:
     with pytest.raises(ApiError) as exc_info:
         principal_permission("1", "me")

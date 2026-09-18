@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 
-
 _TEST_ENV = {
     "DJANGO_SECRET_KEY": "test-secret",
     "REDIS_CACHE_URL": "redis://localhost:6379/0",

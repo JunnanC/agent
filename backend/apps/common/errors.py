@@ -20,6 +20,7 @@ class ErrorCode:
 
 
 VALIDATION_ERROR = ErrorCode(40001, "VALIDATION_ERROR", 400, "请求参数无效")
+INVALID_ROLE = ErrorCode(40003, "INVALID_ROLE", 400, "角色必须是内置角色")
 EMPTY_FILTER = ErrorCode(40004, "EMPTY_FILTER", 400, "筛选条件不能为空")
 UNAUTHENTICATED = ErrorCode(40101, "UNAUTHENTICATED", 401, "未登录")
 TOKEN_EXPIRED = ErrorCode(40102, "TOKEN_EXPIRED", 401, "登录已过期")
@@ -64,6 +65,7 @@ ERROR_CODES = {
     error.symbol: error
     for error in (
         VALIDATION_ERROR,
+        INVALID_ROLE,
         EMPTY_FILTER,
         UNAUTHENTICATED,
         TOKEN_EXPIRED,

@@ -70,6 +70,7 @@ def test_audit_model_has_exact_frozen_fields() -> None:
 def test_error_dictionary_has_exact_symbol_set() -> None:
     assert set(ERROR_CODES) == {
         "VALIDATION_ERROR",
+        "INVALID_ROLE",
         "EMPTY_FILTER",
         "UNAUTHENTICATED",
         "TOKEN_EXPIRED",

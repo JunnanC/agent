@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 
-
 _TEST_ENV = {
     "DJANGO_SECRET_KEY": "test-secret",
     "REDIS_CACHE_URL": "redis://localhost:6379/0",
@@ -25,7 +24,7 @@ _TEST_ENV = {
 for _name, _value in _TEST_ENV.items():
     os.environ.setdefault(_name, _value)
 
-from .base import *  # noqa: E402
+from .base import *
 
 ALLOWED_HOSTS = ["testserver"]
 DEBUG = False

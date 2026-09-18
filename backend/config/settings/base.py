@@ -16,6 +16,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "drf_spectacular",
     "apps.common",
+    "apps.identity",
 ]
 
 MIDDLEWARE = [
@@ -74,6 +75,7 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
     "EXCEPTION_HANDLER": "apps.common.errors.drf_exception_handler",
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "UNAUTHENTICATED_USER": None,
 }
 
 TIME_ZONE = "UTC"
@@ -85,8 +87,11 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 MINIO = ENV["MINIO"]
 
-COMMON_PRINCIPAL_PERMISSION_PROVIDER = ""
-COMMON_AUDITABLE_ACTOR_PROVIDER = ""
+COMMON_PRINCIPAL_PERMISSION_PROVIDER = (
+    "apps.identity.services.permissions.IdentityPrincipalPermissionProvider"
+)
+COMMON_AUDITABLE_ACTOR_PROVIDER = "apps.identity.services.auth.IdentityAuditableActorProvider"
+IDENTITY_MEMBERSHIP_PROVIDER = ""
 COMMON_IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60
 COMMON_OUTBOX_BATCH_SIZE = 100
 COMMON_AUDIT_EXPORT_MAX_RECORDS = 100_000
