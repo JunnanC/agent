@@ -9,8 +9,8 @@ try:
 except ImportError:  # pragma: no cover - minimal contract environments omit Celery
     app = None
 else:
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "education_experiment_platform.settings")
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "main.settings")
 
-    app = Celery("education_experiment_platform")
+    app = Celery("main")
     app.config_from_object("django.conf:settings", namespace="CELERY")
-    app.autodiscover_tasks(related_name="celery_tasks")
+    app.autodiscover_tasks()

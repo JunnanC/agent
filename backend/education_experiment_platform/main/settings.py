@@ -38,7 +38,9 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "apps.runtime",
+    # Modular monolith: each app owns one bounded business capability.
+    # Keep the project package for configuration only; business logic lives in apps/.
+    "runtime",
 ]
 
 MIDDLEWARE = [
@@ -51,7 +53,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "education_experiment_platform.urls"
+ROOT_URLCONF = "main.urls"
 
 TEMPLATES = [
     {
@@ -68,7 +70,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "education_experiment_platform.wsgi.application"
+WSGI_APPLICATION = "main.wsgi.application"
 
 
 # Database

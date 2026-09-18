@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import unittest
 
-from apps.runtime.contracts import RuntimeSpec
-from apps.runtime.enums import InstanceStatus, RuntimeType
-from apps.runtime.fake import FakeRuntimeAdapter
+from runtime.contracts import RuntimeSpec
+from runtime.enums import InstanceStatus, RuntimeType
+from runtime.fake import FakeRuntimeAdapter
 
 
 def make_spec() -> RuntimeSpec:
