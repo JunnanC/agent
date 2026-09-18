@@ -17,6 +17,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "apps.common",
     "apps.identity",
+    "apps.membership",
 ]
 
 MIDDLEWARE = [
@@ -91,7 +92,7 @@ COMMON_PRINCIPAL_PERMISSION_PROVIDER = (
     "apps.identity.services.permissions.IdentityPrincipalPermissionProvider"
 )
 COMMON_AUDITABLE_ACTOR_PROVIDER = "apps.identity.services.auth.IdentityAuditableActorProvider"
-IDENTITY_MEMBERSHIP_PROVIDER = ""
+IDENTITY_MEMBERSHIP_PROVIDER = "apps.membership.identity_provider.MembershipIdentityProvider"
 COMMON_IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60
 COMMON_OUTBOX_BATCH_SIZE = 100
 COMMON_AUDIT_EXPORT_MAX_RECORDS = 100_000

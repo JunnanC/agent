@@ -25,7 +25,13 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["config", "apps", "apps.common", "apps.identity"]
+packages = [
+  "config",
+  "apps",
+  "apps.common",
+  "apps.identity",
+  "apps.membership",
+]
 
 [tool.ruff]
 target-version = "py311"
@@ -37,9 +43,17 @@ quote-style = "double"
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings.test"
-testpaths = ["apps/common/tests", "apps/identity/tests"]
+testpaths = [
+  "apps/common/tests",
+  "apps/identity/tests",
+  "apps/membership/tests",
+]
 addopts = "-ra -p no:cacheprovider"
 
 [tool.coverage.run]
-source = ["apps.common", "apps.identity"]
-omit = ["apps/common/tests/*", "apps/identity/tests/*"]
+source = ["apps.common", "apps.identity", "apps.membership"]
+omit = [
+  "apps/common/tests/*",
+  "apps/identity/tests/*",
+  "apps/membership/tests/*",
+]

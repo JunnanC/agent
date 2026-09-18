@@ -16,13 +16,29 @@
 - 审计：统一记录、脱敏、检索与异步导出。
 - Provider 契约：身份与权限由业务侧通过 settings 注入，common 不实现认证。
 
+## membership 模块
+
+`backend/apps/membership` 负责单团队成员资格生命周期、`ACTIVE` 成员实时裁决、阻断检查与 identity 成员接缝。两张业务表映射 V4.0 冻结结构并使用 `managed = False`，不生成 migration。
+
+- 用户端：成员记录查询、申请/重新申请、主动退出。
+- 教学端：成员与申请列表、审核、直接添加、移除。
+- 安全：服务端独立校验角色与数据范围，手机号/邮箱脱敏，写操作幂等并落审计。
+- 事件：业务事实与 Outbox 事件同事务写入；会话撤销只发布事件给 M4-B。
+- 接缝：`IDENTITY_MEMBERSHIP_PROVIDER` 指向 `apps.membership.identity_provider.MembershipIdentityProvider`。
+
+模块设计、API、领域服务、冲突保守策略与测试说明见 `backend/apps/membership/README.md`。
+
 ## 后端开发
 
 ```powershell
 Set-Location agent\backend
 .venv\Scripts\python.exe -m pytest apps\common -q
+.venv\Scripts\python.exe -m pytest apps\membership -q
+.venv\Scripts\python.exe -m pytest apps\identity -q
 .venv\Scripts\python.exe -m ruff format --check apps\common
+.venv\Scripts\python.exe -m ruff format --check apps\membership
 .venv\Scripts\python.exe -m ruff check apps\common
+.venv\Scripts\python.exe -m ruff check apps\membership
 ```
 
 详细使用方式见 `backend/README.md`。
