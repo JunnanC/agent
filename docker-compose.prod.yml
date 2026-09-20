@@ -1,0 +1,151 @@
+# ──────────────────────────────────────────────────────────
+# EduTech 生产环境 Docker Compose
+# MySQL / Redis 使用服务器已有实例（external network）
+# ──────────────────────────────────────────────────────────
+
+x-backend-image: &backend-image
+  image: ${BACKEND_IMAGE:-edutech/backend:latest}
+
+x-backend-env: &backend-env
+  env_file:
+    - ./backend/.env.prod
+  environment:
+    DJANGO_SETTINGS_MODULE: config.settings.prod
+    TZ: ${TZ:-Asia/Shanghai}
+
+x-backend-deploy: &backend-deploy
+  restart: always
+  networks:
+    - edutech-net
+  depends_on:
+    minio:
+      condition: service_healthy
+    minio-init:
+      condition: service_completed_successfully
+
+services:
+  # ── Django API ──────────────────────────────────────────
+  api:
+    <<: [*backend-image, *backend-env, *backend-deploy]
+    command:
+      - gunicorn
+      - config.wsgi:application
+      - --bind=0.0.0.0:8000
+      - --workers=4
+      - --threads=2
+      - --worker-class=gthread
+      - --timeout=120
+      - --graceful-timeout=30
+      - --keepalive=5
+      - --access-logfile=-
+      - --error-logfile=-
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/admin/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      replicas: ${API_REPLICAS:-2}
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # ── Celery Worker ───────────────────────────────────────
+  worker:
+    <<: [*backend-image, *backend-env, *backend-deploy]
+    command: ["celery", "-A", "config", "worker", "--loglevel=INFO", "--concurrency=4"]
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 512M
+
+  # ── Celery Beat ─────────────────────────────────────────
+  beat:
+    <<: [*backend-image, *backend-env, *backend-deploy]
+    command: ["celery", "-A", "config", "beat", "--loglevel=INFO"]
+    deploy:
+      replicas: 1
+
+  # ── MinIO 对象存储 ──────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - edutech-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_GENERAL_BUCKET: ${MINIO_GENERAL_BUCKET}
+      MINIO_ARCHIVE_BUCKET: ${MINIO_ARCHIVE_BUCKET}
+      MINIO_SNAPSHOT_BUCKET: ${MINIO_SNAPSHOT_BUCKET}
+      MINIO_EXPORT_BUCKET: ${MINIO_EXPORT_BUCKET}
+    entrypoint: >
+      sh -c '
+      mc alias set local http://$$MINIO_ENDPOINT $$MINIO_ACCESS_KEY $$MINIO_SECRET_KEY &&
+      mc mb --ignore-existing local/$$MINIO_GENERAL_BUCKET &&
+      mc mb --ignore-existing local/$$MINIO_ARCHIVE_BUCKET &&
+      mc mb --ignore-existing local/$$MINIO_SNAPSHOT_BUCKET &&
+      mc mb --ignore-existing local/$$MINIO_EXPORT_BUCKET &&
+      mc anonymous set none local/$$MINIO_GENERAL_BUCKET &&
+      mc anonymous set none local/$$MINIO_ARCHIVE_BUCKET &&
+      mc anonymous set none local/$$MINIO_SNAPSHOT_BUCKET &&
+      mc anonymous set none local/$$MINIO_EXPORT_BUCKET
+      '
+    networks:
+      - edutech-net
+
+  # ── Nginx 反向代理 ──────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./backend/staticfiles:/var/www/static:ro
+      - nginx-logs:/var/log/nginx
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - edutech-net
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    restart: always
+
+networks:
+  edutech-net:
+    driver: overlay
+    attachable: true
+
+volumes:
+  minio-data:
+  nginx-logs:

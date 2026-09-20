@@ -1,0 +1,173 @@
+# ──────────────────────────────────────────────────────────
+# EduTech Docker Swarm Stack
+# 部署: docker stack deploy -c deploy/swarm/stack.yml edutech
+# ──────────────────────────────────────────────────────────
+
+version: "3.9"
+
+services:
+  api:
+    image: ${BACKEND_IMAGE:-edutech/backend:latest}
+    command:
+      - gunicorn
+      - config.wsgi:application
+      - --bind=0.0.0.0:8000
+      - --workers=4
+      - --threads=2
+      - --worker-class=gthread
+      - --timeout=120
+      - --access-logfile=-
+      - --error-logfile=-
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+    env_file:
+      - ../backend/.env.prod
+    networks:
+      - edutech-overlay
+      - infra-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/admin/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 30s
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+
+  worker:
+    image: ${BACKEND_IMAGE:-edutech/backend:latest}
+    command: ["celery", "-A", "config", "worker", "--loglevel=INFO", "--concurrency=4"]
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+    env_file:
+      - ../backend/.env.prod
+    networks:
+      - edutech-overlay
+      - infra-net
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+
+  beat:
+    image: ${BACKEND_IMAGE:-edutech/backend:latest}
+    command: ["celery", "-A", "config", "beat", "--loglevel=INFO"]
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+    env_file:
+      - ../backend/.env.prod
+    networks:
+      - edutech-overlay
+      - infra-net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  minio:
+    image: minio/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    volumes:
+      - minio-data:/data
+    networks:
+      - edutech-overlay
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_GENERAL_BUCKET: ${MINIO_GENERAL_BUCKET}
+      MINIO_ARCHIVE_BUCKET: ${MINIO_ARCHIVE_BUCKET}
+      MINIO_SNAPSHOT_BUCKET: ${MINIO_SNAPSHOT_BUCKET}
+      MINIO_EXPORT_BUCKET: ${MINIO_EXPORT_BUCKET}
+    entrypoint: >
+      sh -c '
+      mc alias set local http://$$MINIO_ENDPOINT $$MINIO_ACCESS_KEY $$MINIO_SECRET_KEY &&
+      mc mb --ignore-existing local/$$MINIO_GENERAL_BUCKET &&
+      mc mb --ignore-existing local/$$MINIO_ARCHIVE_BUCKET &&
+      mc mb --ignore-existing local/$$MINIO_SNAPSHOT_BUCKET &&
+      mc mb --ignore-existing local/$$MINIO_EXPORT_BUCKET &&
+      mc anonymous set none local/$$MINIO_GENERAL_BUCKET &&
+      mc anonymous set none local/$$MINIO_ARCHIVE_BUCKET &&
+      mc anonymous set none local/$$MINIO_SNAPSHOT_BUCKET &&
+      mc anonymous set none local/$$MINIO_EXPORT_BUCKET
+      '
+    networks:
+      - edutech-overlay
+    deploy:
+      restart_policy:
+        condition: on-failure
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: host
+    volumes:
+      - ../deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../deploy/nginx/conf.d:/etc/nginx/conf.d:ro
+      - static-files:/var/www/static:ro
+    networks:
+      - edutech-overlay
+    depends_on:
+      - api
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 128M
+      placement:
+        constraints:
+          - node.role == manager
+
+networks:
+  edutech-overlay:
+    driver: overlay
+    attachable: true
+  infra-net:
+    external: true
+    name: edutech-infra
+
+volumes:
+  minio-data:
+  static-files:

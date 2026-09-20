@@ -1,0 +1,88 @@
+name: EduTech CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: "3.12"
+  REGISTRY: docker.1ms.run
+  IMAGE_NAME: edutech/backend
+
+stages:
+  - name: quality
+    jobs:
+      lock-check:
+        name: 依赖锁校验
+        container:
+          image: python:${PYTHON_VERSION}-slim
+        steps:
+          - uses: actions/checkout@v4
+          - name: 安装 uv
+            run: pip install --no-cache-dir uv
+          - name: 校验 uv.lock 与 pyproject.toml 一致性
+            working-directory: backend
+            run: |
+              if [ ! -f uv.lock ]; then
+                echo "ERROR: uv.lock 不存在，请先运行 uv lock"
+                exit 1
+              fi
+              uv lock --check
+              echo "OK: uv.lock 与 pyproject.toml 一致"
+
+      lint:
+        name: 代码规范检查
+        container:
+          image: python:${PYTHON_VERSION}-slim
+        steps:
+          - uses: actions/checkout@v4
+          - name: 安装依赖
+            working-directory: backend
+            run: pip install --no-cache-dir ruff
+          - name: Ruff check
+            working-directory: backend
+            run: ruff check .
+
+      test:
+        name: 单元测试
+        container:
+          image: python:${PYTHON_VERSION}-slim
+        services:
+          redis:
+            image: redis:7
+        steps:
+          - uses: actions/checkout@v4
+          - name: 安装 uv
+            run: pip install --no-cache-dir uv
+          - name: 安装项目依赖
+            working-directory: backend
+            run: uv pip install --system ".[dev]" || uv pip install --system . pytest pytest-django pytest-cov
+          - name: 运行测试
+            working-directory: backend
+            env:
+              DJANGO_SETTINGS_MODULE: config.settings.test
+              REDIS_CACHE_URL: redis://redis:6379/0
+              CELERY_BROKER_URL: redis://redis:6379/1
+            run: python -m pytest --tb=short -q
+
+  - name: build
+    jobs:
+      docker:
+        name: 构建镜像
+        needs: [lock-check, lint, test]
+        if: github.ref == 'refs/heads/main'
+        steps:
+          - uses: actions/checkout@v4
+          - name: 构建后端镜像
+            run: |
+              docker build \
+                -f backend/Dockerfile.prod \
+                -t ${REGISTRY}/${IMAGE_NAME}:latest \
+                -t ${REGISTRY}/${IMAGE_NAME}:$(date +%Y%m%d)-${GITHUB_SHA:0:7} \
+                backend/
+          - name: 镜像构建完成
+            run: |
+              docker images ${REGISTRY}/${IMAGE_NAME}
+              echo "镜像已构建，后续可配置 push 到镜像仓库"
