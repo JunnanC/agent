@@ -12,6 +12,7 @@ COMPOSE_FILE="${PROJECT_ROOT}/docker-compose.prod.yml"
 
 BUILD=false
 NO_PULL=false
+BACKEND_IMAGE="${BACKEND_IMAGE:-edutech/backend:latest}"
 for arg in "$@"; do
     case "$arg" in
         --build)   BUILD=true ;;
@@ -55,8 +56,8 @@ fi
 
 # ── 拉取镜像 ──────────────────────────────────────────────
 if [ "${NO_PULL}" = false ]; then
-    echo "[2/4] 拉取最新镜像 ..."
-    docker pull edutech/backend:latest 2>/dev/null || echo "  使用本地镜像"
+    echo "[2/4] 拉取最新镜像 (${BACKEND_IMAGE}) ..."
+    docker pull "${BACKEND_IMAGE}" 2>/dev/null || echo "  使用本地镜像"
     docker pull nginx:1.27-alpine 2>/dev/null || true
     docker pull minio/minio:latest 2>/dev/null || true
 else
@@ -69,7 +70,7 @@ docker run --rm \
     --env-file "${PROJECT_ROOT}/backend/.env.prod" \
     -e DJANGO_SETTINGS_MODULE=config.settings.prod \
     -v "${PROJECT_ROOT}/backend/staticfiles:/app/staticfiles" \
-    edutech/backend:latest \
+    "${BACKEND_IMAGE}" \
     python manage.py collectstatic --noinput 2>/dev/null \
     || echo "  静态文件收集跳过（可能需要数据库连接）"
 

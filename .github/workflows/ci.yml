@@ -8,8 +8,8 @@ on:
 
 env:
   PYTHON_VERSION: "3.12"
-  REGISTRY: docker.1ms.run
-  IMAGE_NAME: edutech/backend
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
 
 jobs:
   lock-check:
@@ -69,20 +69,80 @@ jobs:
         run: python -m pytest --tb=short -q
 
   docker:
-    name: 构建镜像
+    name: 构建并推送镜像
     needs: [lock-check, lint, test]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
-      - name: 构建后端镜像
+
+      - name: 登录 GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 生成镜像标签
+        id: meta
+        run: |
+          TAG=$(date +%Y%m%d)-${GITHUB_SHA:0:7}
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: 构建并推送镜像
         run: |
           docker build \
             -f backend/Dockerfile.prod \
-            -t ${REGISTRY}/${IMAGE_NAME}:latest \
-            -t ${REGISTRY}/${IMAGE_NAME}:$(date +%Y%m%d)-${GITHUB_SHA:0:7} \
+            -t ${IMAGE_NAME}:latest \
+            -t ${IMAGE_NAME}:${{ steps.meta.outputs.tag }} \
             backend/
-      - name: 镜像构建完成
+          docker push ${IMAGE_NAME}:latest
+          docker push ${IMAGE_NAME}:${{ steps.meta.outputs.tag }}
+          echo "镜像已推送: ${IMAGE_NAME}:${{ steps.meta.outputs.tag }}"
+
+  deploy:
+    name: 部署到服务器
+    needs: [docker]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 配置 SSH 密钥
         run: |
-          docker images ${REGISTRY}/${IMAGE_NAME}
-          echo "镜像已构建，后续可配置 push 到镜像仓库"
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: 部署到生产环境
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'DEPLOY'
+            set -e
+            echo "=== 拉取最新镜像 ==="
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker pull ghcr.io/${{ github.repository }}:latest
+
+            echo "=== 收集静态文件 ==="
+            cd /opt/edutech
+            docker run --rm \
+              --env-file backend/.env.prod \
+              -e DJANGO_SETTINGS_MODULE=config.settings.prod \
+              -v "$(pwd)/backend/staticfiles:/app/staticfiles" \
+              ghcr.io/${{ github.repository }}:latest \
+              python manage.py collectstatic --noinput 2>/dev/null || echo "静态文件收集跳过"
+
+            echo "=== 部署 Swarm Stack ==="
+            BACKEND_IMAGE=ghcr.io/${{ github.repository }}:latest \
+              docker stack deploy -c docker-compose.prod.yml edutech --prune
+
+            echo "=== 部署完成 ==="
+            docker stack services edutech
+          DEPLOY
+
+      - name: 清理 SSH 密钥
+        if: always()
+        run: rm -f ~/.ssh/id_ed25519
