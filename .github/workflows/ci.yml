@@ -55,6 +55,8 @@ jobs:
         image: redis:7
     steps:
       - uses: actions/checkout@v4
+      - name: 安装系统依赖
+        run: apt-get update && apt-get install -y --no-install-recommends pkg-config gcc libmysqlclient-dev
       - name: 安装 uv
         run: pip install --no-cache-dir uv
       - name: 安装项目依赖
