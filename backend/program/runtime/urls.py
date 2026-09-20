@@ -1,0 +1,3 @@
+"""Runtime app routes."""
+
+urlpatterns = []
