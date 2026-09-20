@@ -72,7 +72,7 @@ services:
 
   # ── MinIO 对象存储 ──────────────────────────────────────
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:latest
     command: ["server", "/data", "--console-address", ":9001"]
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
@@ -93,7 +93,7 @@ services:
           memory: 512M
 
   minio-init:
-    image: minio/mc:latest
+    image: quay.io/minio/minio:latest
     depends_on:
       minio:
         condition: service_healthy
@@ -115,7 +115,8 @@ services:
       mc anonymous set none local/$$MINIO_GENERAL_BUCKET &&
       mc anonymous set none local/$$MINIO_ARCHIVE_BUCKET &&
       mc anonymous set none local/$$MINIO_SNAPSHOT_BUCKET &&
-      mc anonymous set none local/$$MINIO_EXPORT_BUCKET
+      mc anonymous set none local/$$MINIO_EXPORT_BUCKET &&
+      echo "MinIO buckets initialized"
       '
     networks:
       - edutech-net
@@ -143,7 +144,7 @@ services:
 
 networks:
   edutech-net:
-    driver: overlay
+    driver: bridge
     attachable: true
 
 volumes:
