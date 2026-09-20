@@ -136,12 +136,13 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'DEPLOY'
             set -e
-            echo "=== 拉取最新镜像 ==="
+            echo "=== 拉取最新代码和镜像 ==="
+            cd /opt/edutech
+            git pull origin master
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker pull ghcr.io/junnanc/agent:latest
 
             echo "=== 收集静态文件 ==="
-            cd /opt/edutech
             docker run --rm \
               --env-file backend/.env.prod \
               -e DJANGO_SETTINGS_MODULE=config.settings.prod \
