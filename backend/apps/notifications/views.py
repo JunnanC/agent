@@ -5,7 +5,7 @@ from itertools import chain
 from typing import Iterator
 
 from django.http import StreamingHttpResponse
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 
@@ -20,7 +20,19 @@ from apps.notifications.events import (
 )
 
 
-@extend_schema(request=None, responses=None)
+@extend_schema(
+    request=None,
+    tags=["notifications"],
+    responses={
+        200: OpenApiResponse(
+            response=None,
+            description=(
+                "Non-JSON text/event-stream response. Generated clients must "
+                "exclude this operation and use the frontend event-client."
+            ),
+        )
+    },
+)
 class EventStreamView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []

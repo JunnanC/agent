@@ -1,5 +1,6 @@
 import ipaddress
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pymysql
@@ -106,6 +107,11 @@ SPECTACULAR_SETTINGS = {
     "TITLE": "Education Experiment Platform API",
     "VERSION": "2.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    "EXTENSIONS_INFO": {
+        "x-openapi-revision": "2026-09-20.b6-pending-freeze",
+        "x-generated-at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
+        "x-contract-status": "pending-freeze; replace after contract freeze",
+    },
 }
 
 CELERY_BROKER_URL = os.environ.get("REDIS_URL", "")

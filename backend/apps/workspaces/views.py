@@ -35,6 +35,7 @@ class WorkspaceSessionCreateView(APIView):
     authentication_classes = []
 
     @extend_schema(
+        tags=["workspaces"],
         request=WorkspaceSessionCreateRequestSerializer,
         responses=WorkspaceSessionCreateResponseSerializer,
     )
@@ -69,6 +70,7 @@ class WorkspaceSessionRenewView(APIView):
     authentication_classes = []
 
     @extend_schema(
+        tags=["workspaces"],
         request=WorkspaceSessionRenewRequestSerializer,
         responses=WorkspaceSessionRenewResponseSerializer,
     )
@@ -95,6 +97,7 @@ class WorkspaceSessionRevokeView(APIView):
     authentication_classes = []
 
     @extend_schema(
+        tags=["workspaces"],
         request=WorkspaceSessionRevokeRequestSerializer,
         responses=WorkspaceSessionRevokeResponseSerializer,
     )
@@ -117,6 +120,7 @@ class WorkspaceSnapshotView(APIView):
     authentication_classes = []
 
     @extend_schema(
+        tags=["workspaces"],
         request=WorkspaceSnapshotRequestSerializer,
         responses=WorkspaceSnapshotResponseSerializer,
     )
