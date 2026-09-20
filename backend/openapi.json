@@ -4,7 +4,7 @@
         "title": "Education Experiment Platform API",
         "version": "2.0.0",
         "x-openapi-revision": "2026-09-20.b6-pending-freeze",
-        "x-generated-at": "2026-09-20T17:07:29+08:00",
+        "x-generated-at": "2026-09-20T17:22:19+08:00",
         "x-contract-status": "pending-freeze; replace after contract freeze"
     },
     "paths": {
@@ -40,12 +40,41 @@
                 "tags": [
                     "core"
                 ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DownloadGrantRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DownloadGrantRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DownloadGrantRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
                 "security": [
-                    {}
+                    {
+                        "cookieAuth": []
+                    }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "No response body"
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DownloadGrantResponse"
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
@@ -287,26 +316,53 @@
                     }
                 }
             }
-        },
-        "/health": {
-            "get": {
-                "operationId": "health_retrieve",
-                "tags": [
-                    "core"
-                ],
-                "security": [
-                    {}
-                ],
-                "responses": {
-                    "200": {
-                        "description": "No response body"
-                    }
-                }
-            }
         }
     },
     "components": {
         "schemas": {
+            "DownloadGrantRequest": {
+                "type": "object",
+                "properties": {
+                    "use": {
+                        "$ref": "#/components/schemas/UseEnum"
+                    }
+                },
+                "required": [
+                    "use"
+                ]
+            },
+            "DownloadGrantResponse": {
+                "type": "object",
+                "properties": {
+                    "asset_id": {
+                        "type": "string"
+                    },
+                    "one_time_token": {
+                        "type": "string"
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "max_uses": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "asset_id",
+                    "expires_at",
+                    "max_uses",
+                    "one_time_token"
+                ]
+            },
+            "UseEnum": {
+                "enum": [
+                    "REPORT_DOWNLOAD",
+                    "ARCHIVE_EXPORT"
+                ],
+                "type": "string",
+                "description": "* `REPORT_DOWNLOAD` - REPORT_DOWNLOAD\n* `ARCHIVE_EXPORT` - ARCHIVE_EXPORT"
+            },
             "WorkspaceSessionCreateRequest": {
                 "type": "object",
                 "properties": {
@@ -455,6 +511,13 @@
                     "confirmed_seq",
                     "idempotent_replay"
                 ]
+            }
+        },
+        "securitySchemes": {
+            "cookieAuth": {
+                "type": "apiKey",
+                "in": "cookie",
+                "name": "sessionid"
             }
         }
     }

@@ -1,7 +1,13 @@
 import json
 from ipaddress import ip_network
 
+from django.contrib.auth.models import User
+from django.middleware.csrf import get_token
 from django.test import SimpleTestCase, override_settings
+from rest_framework.test import APIRequestFactory
+
+from apps.core.adapters.fake import FAKE_DOWNLOAD_GRANT_REPOSITORY
+from apps.core.views import DownloadGrantView
 
 
 @override_settings(
@@ -45,6 +51,34 @@ class B2RouteTests(SimpleTestCase):
     def test_download_grants_requires_idempotency_key(self):
         response = self.request("post", "/api/v2/files/asset-001/download-grants")
         self.assert_error_envelope(response, 400, "IDEMPOTENCY_KEY_REQUIRED")
+
+    def test_download_grants_issues_placeholder_token(self):
+        factory = APIRequestFactory(enforce_csrf_checks=True)
+        request = factory.post(
+            "/api/v2/files/asset-001/download-grants",
+            data={"use": "REPORT_DOWNLOAD"},
+            content_type="application/json",
+            HTTP_IDEMPOTENCY_KEY="key-download-grant",
+        )
+        request.user = User(id=42, username="student-42")
+        request.portal = "USER"
+        csrf_token = get_token(request)
+        request.COOKIES["csrftoken"] = csrf_token
+        request.META["HTTP_X_CSRFTOKEN"] = csrf_token
+        response = DownloadGrantView.as_view()(request, asset_id="asset-001")
+        response.render()
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.headers["Cache-Control"], "private, no-store")
+        payload = json.loads(response.content)
+        self.assertEqual(
+            set(payload),
+            {"asset_id", "one_time_token", "expires_at", "max_uses"},
+        )
+        self.assertTrue(payload["one_time_token"])
+        self.assertEqual(payload["max_uses"], 1)
+        stored = list(FAKE_DOWNLOAD_GRANT_REPOSITORY.grants.values())[-1]
+        self.assertNotIn(payload["one_time_token"], repr(stored))
+        self.assertEqual(len(stored.token_hash), 64)
 
     def test_workspace_session_requires_idempotency_key(self):
         response = self.request("post", "/api/v2/tasks/task-001/workspace-sessions")

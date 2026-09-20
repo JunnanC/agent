@@ -1,1 +1,1 @@
-"""core module placeholder."""
+"""Adapters for core ports."""

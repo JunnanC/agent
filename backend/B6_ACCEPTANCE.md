@@ -44,7 +44,6 @@ Errors: 0
 /api/v2/workspace-sessions/{public_id}/renew  POST   workspaces
 /api/v2/workspace-sessions/{public_id}/revoke POST   workspaces
 /files/{one_time_token}                       GET    core
-/health                                       GET    core
 ```
 
 ### 特殊端点处理
@@ -52,6 +51,7 @@ Errors: 0
 - `GET /api/v2/events/stream`：保留在 schema，响应描述明确为 `text/event-stream` 非 JSON；前端生成器必须排除并由 `event-client` 处理。
 - `GET /files/{one_time_token}`：保留在 schema，响应描述明确为文件流非 JSON；不在 `/api/v2` 分区，前端生成器必须排除。
 - `POST /internal/workspace-tokens/verify`：`exclude=True`，未出现在 public schema。
+- `GET /health`：`exclude=True`，未出现在 public schema；该端点仅用于部署健康检查。
 - `POST /api/v2/files/{asset_id}/download-grants`：保留在 schema，供前端生成请求函数。
 
 人工 diff 结论：与 `DECISIONS.md` D-001/D-002/D-004 一致；不存在 `/events`、`/api/v2/files/{token}`、`/me/experiment-tasks` 回流路径。
@@ -62,8 +62,9 @@ Errors: 0
 
 - `/api/v2/*`：`backend/deploy/01-api-v2.conf`
 - `/api/v2/events/stream`：`backend/deploy/02-events-stream.conf`
-- `/workspace/*`：`backend/deploy/03-workspace.conf`
+- `/workspace/*`：USER 使用 `backend/deploy/03-workspace.conf`；TEACHING/PLATFORM 使用 `backend/deploy/03-workspace-reject.conf`
 - `/files/*`：`backend/deploy/04-files.conf`
+- 全局 `http{}`：`backend/deploy/00-http.conf`（只 include 一次，定义 `download_limit`）
 
 说明：
 
@@ -148,7 +149,7 @@ location /workspace/ {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "Upgrade";
+    proxy_set_header Connection $connection_upgrade;
 
     # Drop browser-supplied portal; only the gateway may set it from Host.
     proxy_set_header X-Portal "";
@@ -171,7 +172,42 @@ location /workspace/ {
 }
 ```
 
+### `/workspace/*` rejection：`backend/deploy/03-workspace-reject.conf`
+
+```nginx
+# TEACHING and PLATFORM portal server blocks: reject student-workspace access.
+
+location /workspace/ {
+    return 404;
+}
+```
+
 ### `/files/*`：`backend/deploy/04-files.conf`
+
+先在 `nginx.conf` 的 `http{}` 上下文 include 全局片段（只 include 一次）：
+
+```nginx
+# nginx.conf http{} context
+include backend/deploy/00-http.conf;
+```
+
+`00-http.conf` 定义 `/files/*` 依赖的限流共享内存区和 WebSocket `Connection` 映射：
+
+```nginx
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+limit_req_zone $binary_remote_addr zone=download_limit:10m rate=10r/s;
+```
+
+`api_gateway` 与 `workspace_gateway` 是外部部署依赖，必须在主 `nginx.conf` 的 `http{}` 上下文中定义：
+
+```nginx
+upstream api_gateway { server <api-gateway-host:port>; }
+upstream workspace_gateway { server <workspace-gateway-host:port>; }
+```
 
 ```nginx
 # Nginx -> API Gateway -> Django fragment for one-time-token downloads.
