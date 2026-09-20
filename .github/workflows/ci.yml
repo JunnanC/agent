@@ -136,9 +136,13 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'DEPLOY'
             set -e
-            echo "=== 拉取最新代码和镜像 ==="
+            echo "=== 同步最新代码 ==="
             cd /opt/edutech
-            git pull origin master
+            git remote set-url origin https://github.com/JunnanC/agent.git
+            GIT_TERMINAL_PROMPT=0 git fetch origin master
+            git reset --hard origin/master
+
+            echo "=== 拉取最新镜像 ==="
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker pull ghcr.io/junnanc/agent:latest
 
