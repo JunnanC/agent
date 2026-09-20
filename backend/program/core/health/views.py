@@ -32,7 +32,7 @@ class ReadyHealthView(APIView):
                 message="服务尚未就绪",
                 request=request,
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail={"database": "unavailable"},
+                details={"database": "unavailable"},
                 retryable=True,
             )
         return success_response(

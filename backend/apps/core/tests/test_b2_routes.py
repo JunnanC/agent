@@ -50,21 +50,28 @@ class B2RouteTests(SimpleTestCase):
         response = self.request("post", "/api/v2/tasks/task-001/workspace-sessions")
         self.assert_error_envelope(response, 400, "IDEMPOTENCY_KEY_REQUIRED")
 
-    def test_workspace_routes_are_b4_placeholders(self):
-        requests = [
-            ("post", "/api/v2/tasks/task-001/workspace-sessions", "key-1"),
-            ("post", "/api/v2/workspace-sessions/session-001/renew", "key-2"),
-            ("post", "/api/v2/workspace-sessions/session-001/revoke", "key-3"),
-            ("put", "/api/v2/tasks/task-001/workspace-snapshot", None),
-        ]
-        for method, path, key in requests:
-            headers = {"HTTP_IDEMPOTENCY_KEY": key} if key else {}
-            response = self.request(method, path, extra=headers)
-            self.assert_error_envelope(response, 501, "NOT_IMPLEMENTED")
+    def test_workspace_routes_are_registered(self):
+        response = self.request(
+            "post",
+            "/api/v2/tasks/task-001/workspace-sessions",
+            data={"student_public_id": "student-001", "instance_public_id": "instance-001"},
+            content_type="application/json",
+            extra={"HTTP_IDEMPOTENCY_KEY": "key-1"},
+        )
+        self.assertEqual(response.status_code, 201)
 
-    def test_event_stream_is_b3_placeholder(self):
+        response = self.request(
+            "put",
+            "/api/v2/tasks/task-001/workspace-snapshot",
+            data={"client_seq": 1},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_event_stream_is_sse(self):
         response = self.request("get", "/api/v2/events/stream")
-        self.assert_error_envelope(response, 501, "NOT_IMPLEMENTED")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["Content-Type"], "text/event-stream")
 
     def test_internal_verify_from_untrusted_source_is_404(self):
         response = self.client.post(
@@ -73,12 +80,12 @@ class B2RouteTests(SimpleTestCase):
         )
         self.assert_error_envelope(response, 404, "NOT_FOUND")
 
-    def test_internal_verify_from_trusted_source_is_b4_placeholder(self):
+    def test_internal_verify_from_trusted_source_is_implemented(self):
         response = self.client.post(
             "/internal/workspace-tokens/verify",
             REMOTE_ADDR="127.0.0.1",
         )
-        self.assert_error_envelope(response, 501, "NOT_IMPLEMENTED")
+        self.assertEqual(response.status_code, 400)
 
     def test_forbidden_route_variants_are_404(self):
         for path in [

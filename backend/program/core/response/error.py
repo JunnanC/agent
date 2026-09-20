@@ -34,8 +34,9 @@ def error_response(
     message: str,
     request: Any,
     status_code: int,
-    detail: Any = None,
+    details: Any = None,
     retryable: bool = False,
+    headers: dict[str, str] | None = None,
 ) -> Response:
     """Return the stable v2 error envelope."""
     return Response(
@@ -43,12 +44,13 @@ def error_response(
             "error": {
                 "code": code,
                 "message": message,
-                "detail": {} if detail is None else detail,
+                "details": {} if details is None else details,
                 "trace_id": get_trace_id(request),
                 "retryable": retryable,
             }
         },
         status=status_code,
+        headers=headers,
     )
 
 
@@ -61,10 +63,19 @@ def api_exception_handler(exc: Exception, context: dict[str, Any]):
             code="INTERNAL_ERROR", message="服务器内部错误", request=request,
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+    if isinstance(exc, ApiError) and getattr(exc, "default_code", "") == "CSRF_REQUIRED":
+        return error_response(
+            code="CSRF_REQUIRED",
+            message=str(exc.detail),
+            request=request,
+            status_code=response.status_code,
+            details={},
+            retryable=False,
+        )
     code, message, retryable = _map_exception(exc, response.status_code)
     return error_response(
         code=code, message=message, request=request,
-        status_code=response.status_code, detail=response.data,
+        status_code=response.status_code, details=response.data,
         retryable=retryable,
     )
 
@@ -88,7 +99,7 @@ def _map_exception(exc: Exception, status_code: int) -> tuple[str, str, bool]:
 
 def _django_error(request: HttpRequest, *, code: str, message: str, status_code: int):
     return JsonResponse({"error": {
-        "code": code, "message": message, "detail": {},
+        "code": code, "message": message, "details": {},
         "trace_id": get_trace_id(request), "retryable": False,
     }}, status=status_code)
 
@@ -108,3 +119,12 @@ def not_found_view(request: HttpRequest, exception=None):
 def server_error_view(request: HttpRequest):
     logger.error("Unhandled Django server error")
     return _django_error(request, code="INTERNAL_ERROR", message="服务器内部错误", status_code=500)
+
+
+def csrf_failure_view(request: HttpRequest, reason: str = ""):
+    return _django_error(
+        request,
+        code="CSRF_REQUIRED",
+        message="缺少或无效的 CSRF token",
+        status_code=403,
+    )

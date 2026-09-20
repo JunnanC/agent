@@ -1,0 +1,289 @@
+openapi: 3.0.3
+info:
+  title: Education Experiment Platform API
+  version: 2.0.0
+paths:
+  /api/v2/events/stream:
+    get:
+      operationId: api_v2_events_stream_retrieve
+      tags:
+      - api
+      security:
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v2/files/{asset_id}/download-grants:
+    post:
+      operationId: api_v2_files_download_grants_create
+      parameters:
+      - in: path
+        name: asset_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      security:
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v2/tasks/{public_id}/workspace-sessions:
+    post:
+      operationId: api_v2_tasks_workspace_sessions_create
+      parameters:
+      - in: path
+        name: public_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceSessionCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkspaceSessionCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkspaceSessionCreateRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceSessionCreateResponse'
+          description: ''
+  /api/v2/tasks/{public_id}/workspace-snapshot:
+    put:
+      operationId: api_v2_tasks_workspace_snapshot_update
+      parameters:
+      - in: path
+        name: public_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceSnapshotRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkspaceSnapshotRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkspaceSnapshotRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceSnapshotResponse'
+          description: ''
+  /api/v2/workspace-sessions/{public_id}/renew:
+    post:
+      operationId: api_v2_workspace_sessions_renew_create
+      parameters:
+      - in: path
+        name: public_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceSessionRenewRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkspaceSessionRenewRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkspaceSessionRenewRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceSessionRenewResponse'
+          description: ''
+  /api/v2/workspace-sessions/{public_id}/revoke:
+    post:
+      operationId: api_v2_workspace_sessions_revoke_create
+      parameters:
+      - in: path
+        name: public_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceSessionRevokeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkspaceSessionRevokeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkspaceSessionRevokeRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceSessionRevokeResponse'
+          description: ''
+  /files/{one_time_token}:
+    get:
+      operationId: files_retrieve
+      parameters:
+      - in: path
+        name: one_time_token
+        schema:
+          type: string
+        required: true
+      tags:
+      - files
+      security:
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /health:
+    get:
+      operationId: health_retrieve
+      tags:
+      - health
+      security:
+      - {}
+      responses:
+        '200':
+          description: No response body
+components:
+  schemas:
+    WorkspaceSessionCreateRequest:
+      type: object
+      properties:
+        student_public_id:
+          type: string
+        instance_public_id:
+          type: string
+      required:
+      - instance_public_id
+      - student_public_id
+    WorkspaceSessionCreateResponse:
+      type: object
+      properties:
+        session_public_id:
+          type: string
+        task_public_id:
+          type: string
+        student_public_id:
+          type: string
+        instance_public_id:
+          type: string
+        token:
+          type: string
+        replayed:
+          type: boolean
+      required:
+      - instance_public_id
+      - replayed
+      - session_public_id
+      - student_public_id
+      - task_public_id
+    WorkspaceSessionRenewRequest:
+      type: object
+      properties:
+        task_public_id:
+          type: string
+        student_public_id:
+          type: string
+        instance_public_id:
+          type: string
+      required:
+      - instance_public_id
+      - student_public_id
+      - task_public_id
+    WorkspaceSessionRenewResponse:
+      type: object
+      properties:
+        session_public_id:
+          type: string
+        task_public_id:
+          type: string
+        student_public_id:
+          type: string
+        instance_public_id:
+          type: string
+        token:
+          type: string
+      required:
+      - instance_public_id
+      - session_public_id
+      - student_public_id
+      - task_public_id
+      - token
+    WorkspaceSessionRevokeRequest:
+      type: object
+      properties:
+        student_public_id:
+          type: string
+      required:
+      - student_public_id
+    WorkspaceSessionRevokeResponse:
+      type: object
+      properties:
+        session_public_id:
+          type: string
+        revoked:
+          type: boolean
+        audit_recorded:
+          type: boolean
+      required:
+      - audit_recorded
+      - revoked
+      - session_public_id
+    WorkspaceSnapshotRequest:
+      type: object
+      properties:
+        client_seq:
+          type: integer
+          minimum: 0
+        payload: {}
+      required:
+      - client_seq
+    WorkspaceSnapshotResponse:
+      type: object
+      properties:
+        confirmed_seq:
+          type: integer
+        idempotent_replay:
+          type: boolean
+      required:
+      - confirmed_seq
+      - idempotent_replay

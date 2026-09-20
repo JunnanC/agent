@@ -36,14 +36,17 @@ def created_response(
     request: Any,
     *,
     location: str | None = None,
+    headers: dict[str, str] | None = None,
 ) -> Response:
     """Return a 201 response, optionally identifying the created resource."""
-    headers = {"Location": location} if location else None
+    response_headers = dict(headers or {})
+    if location:
+        response_headers["Location"] = location
     return success_response(
         data,
         request,
         status_code=status.HTTP_201_CREATED,
-        headers=headers,
+        headers=response_headers,
     )
 
 

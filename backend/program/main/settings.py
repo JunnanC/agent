@@ -1,6 +1,7 @@
 """Django settings for the v2 platform API."""
 
 import os
+from ipaddress import ip_network
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -28,6 +29,15 @@ if APP_ENV != "local" and SECRET_KEY == "local-development-only":
 
 DEBUG = env_bool("DJANGO_DEBUG", APP_ENV == "local")
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
+PORTAL_TRUSTED_PROXY_NETWORKS = [
+    ip_network(item)
+    for item in env_list("PORTAL_TRUSTED_PROXY_NETWORKS", "127.0.0.0/8,::1/128")
+]
+PORTAL_HOST_MAP = {
+    "USER": env_list("PORTAL_USER_HOSTS", "user.localhost"),
+    "TEACHER": env_list("PORTAL_TEACHER_HOSTS", "teacher.localhost"),
+    "ADMIN": env_list("PORTAL_ADMIN_HOSTS", "admin.localhost"),
+}
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -52,6 +62,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "main.urls"
+CSRF_FAILURE_VIEW = "core.response.error.csrf_failure_view"
 
 TEMPLATES = [
     {
