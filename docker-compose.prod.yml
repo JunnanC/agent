@@ -55,7 +55,7 @@ services:
   # ── Celery Worker ───────────────────────────────────────
   worker:
     <<: [*backend-image, *backend-env, *backend-deploy]
-    command: ["celery", "-A", "config", "worker", "--loglevel=INFO", "--concurrency=4"]
+    command: ["celery", "-A", "config", "worker", "--loglevel=INFO", "--concurrency=4", "-Q", "celery,maintenance,orchestration,agent"]
     deploy:
       replicas: 1
       resources:

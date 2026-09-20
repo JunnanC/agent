@@ -52,7 +52,7 @@ services:
 
   worker:
     image: ${BACKEND_IMAGE:-edutech/backend:latest}
-    command: ["celery", "-A", "config", "worker", "--loglevel=INFO", "--concurrency=4"]
+    command: ["celery", "-A", "config", "worker", "--loglevel=INFO", "--concurrency=4", "-Q", "celery,maintenance,orchestration,agent"]
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.prod
     env_file:
@@ -84,6 +84,18 @@ services:
       replicas: 1
       restart_policy:
         condition: on-failure
+
+  # ASGI 入口（SSE 事件流），待确认是否引入 uvicorn 依赖后启用。
+  # asgi:
+  #   image: ${BACKEND_IMAGE:-edutech/backend:latest}
+  #   command: ["uvicorn", "config.asgi:application", "--host", "0.0.0.0", "--port", "8000"]
+  #   environment:
+  #     DJANGO_SETTINGS_MODULE: config.settings.prod
+  #   env_file:
+  #     - ../backend/.env.prod
+  #   networks:
+  #     - edutech-overlay
+  #     - infra-net
 
   minio:
     image: minio/minio:latest

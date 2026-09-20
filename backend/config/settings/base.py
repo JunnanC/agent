@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from kombu import Queue
+
 from config.env import ENV
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -18,6 +20,7 @@ INSTALLED_APPS = [
     "apps.common",
     "apps.identity",
     "apps.membership",
+    "apps.teaching",
 ]
 
 MIDDLEWARE = [
@@ -71,6 +74,28 @@ CELERY_RESULT_BACKEND = str(ENV["CELERY_BROKER_URL"])
 CELERY_TASK_ALWAYS_EAGER = False
 CELERY_TIMEZONE = "UTC"
 CELERY_ENABLE_UTC = True
+
+# Redis broker 以 routing_key 作为队列的 list key，故队列名与 routing_key 必须一致：
+# 只声明队列名，不显式设置 exchange/routing_key。
+CELERY_TASK_DEFAULT_QUEUE = "celery"
+CELERY_TASK_QUEUES = (
+    Queue("celery"),
+    Queue("maintenance"),
+    Queue("orchestration"),
+    Queue("agent"),
+)
+CELERY_TASK_ROUTES = {
+    "apps.common.dispatch_outbox": {"queue": "maintenance"},
+    "apps.common.run_audit_export": {"queue": "maintenance"},
+}
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_BEAT_SCHEDULE = {
+    "dispatch-outbox": {
+        "task": "apps.common.dispatch_outbox",
+        "schedule": 10.0,
+        "options": {"queue": "maintenance"},
+    },
+}
 
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
