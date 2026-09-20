@@ -37,14 +37,12 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
-    "drf_spectacular",
     "core",
     "runtime",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "core.middleware.TraceIdMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -98,20 +96,9 @@ USE_I18N = True
 USE_TZ = True
 
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "core.authentication.ApiSessionAuthentication",
-    ],
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    "EXCEPTION_HANDLER": "core.exceptions.api_exception_handler",
+    "EXCEPTION_HANDLER": "core.response.error.api_exception_handler",
     "DEFAULT_PAGINATION_CLASS": "core.response.pagination.StandardPagination",
     "PAGE_SIZE": 20,
-}
-
-SPECTACULAR_SETTINGS = {
-    "TITLE": "Agent Virtual Platform API",
-    "VERSION": "2.0.0",
-    "OAS_VERSION": "3.0.3",
-    "SERVERS": [{"url": "/api/v2"}],
 }
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")

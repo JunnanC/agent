@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import secrets
 from typing import Any
 
 from rest_framework import status
@@ -7,8 +8,12 @@ from rest_framework.response import Response
 
 
 def get_trace_id(request: Any) -> str:
-    """Return the trace ID attached by the request middleware."""
-    return getattr(request, "trace_id", "")
+    """Return or lazily create the trace ID for the current request."""
+    trace_id = getattr(request, "trace_id", "")
+    if not trace_id:
+        trace_id = secrets.token_hex(16)
+        request.trace_id = trace_id
+    return trace_id
 
 
 def success_response(

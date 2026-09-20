@@ -2,12 +2,10 @@ from __future__ import annotations
 
 from django.db import connection
 from django.db.utils import DatabaseError
-from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.views import APIView
 
-from core.health.serializers import HealthResponseSerializer
 from core.response import error_response, success_response
 
 
@@ -15,7 +13,6 @@ class LiveHealthView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
 
-    @extend_schema(exclude=True)
     def get(self, request):
         return success_response({"status": "ok"}, request)
 
@@ -24,7 +21,6 @@ class ReadyHealthView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
 
-    @extend_schema(exclude=True)
     def get(self, request):
         try:
             with connection.cursor() as cursor:
@@ -48,6 +44,5 @@ class PlatformHealthView(ReadyHealthView):
     authentication_classes = APIView.authentication_classes
     permission_classes = [IsAdminUser]
 
-    @extend_schema(tags=["platform"], responses=HealthResponseSerializer)
     def get(self, request):
         return super().get(request)
