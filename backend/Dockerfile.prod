@@ -3,8 +3,11 @@ FROM python:3.12-slim AS builder
 
 ARG DEBIAN_MIRROR_URL=https://mirrors.tuna.tsinghua.edu.cn/debian
 
+ARG PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    PIP_INDEX_URL=${PIP_INDEX_URL}
 
 WORKDIR /build
 
@@ -15,7 +18,7 @@ RUN sed -i "s|http://deb.debian.org/debian|${DEBIAN_MIRROR_URL}|g" /etc/apt/sour
     && apt-get install -y --no-install-recommends gcc pkg-config default-libmysqlclient-dev \
     && rm -rf /var/lib/apt/lists/* \
     && pip install --no-cache-dir uv \
-    && uv pip install --system --no-cache .
+    && uv pip install --system --no-cache -i ${PIP_INDEX_URL} .
 
 # ── Stage 2: runtime ──────────────────────────────────────
 FROM python:3.12-slim
