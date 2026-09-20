@@ -17,6 +17,7 @@ x-backend-deploy: &backend-deploy
   restart: always
   networks:
     - edutech-net
+    - edutech-infra
   depends_on:
     minio:
       condition: service_healthy
@@ -146,6 +147,8 @@ networks:
   edutech-net:
     driver: bridge
     attachable: true
+  edutech-infra:
+    external: true
 
 volumes:
   minio-data:
