@@ -9,7 +9,7 @@ from django.http import JsonResponse
 TRACEPARENT_PATTERN = re.compile(r"^00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$")
 
 
-def error_response(message: str, trace_id: str) -> JsonResponse:
+def portal_error_response(message: str, trace_id: str) -> JsonResponse:
     return JsonResponse(
         {
             "code": "PORTAL_CONTEXT_INVALID",
@@ -23,7 +23,31 @@ def error_response(message: str, trace_id: str) -> JsonResponse:
 
 def bad_request(request, exception=None):
     trace_id = getattr(request, "trace_id", str(uuid.uuid4()))
-    return error_response("请求上下文无效", trace_id)
+    return portal_error_response("请求上下文无效", trace_id)
+
+
+def not_found(request, exception=None):
+    return JsonResponse(
+        {
+            "code": "NOT_FOUND",
+            "message": "资源不存在",
+            "details": {},
+            "trace_id": getattr(request, "trace_id", str(uuid.uuid4())),
+        },
+        status=404,
+    )
+
+
+def method_not_allowed(request, **kwargs):
+    return JsonResponse(
+        {
+            "code": "METHOD_NOT_ALLOWED",
+            "message": "HTTP 方法不被允许",
+            "details": {},
+            "trace_id": getattr(request, "trace_id", str(uuid.uuid4())),
+        },
+        status=405,
+    )
 
 
 class PortalContextMiddleware:
@@ -33,9 +57,12 @@ class PortalContextMiddleware:
     def __call__(self, request):
         trace_id = self._trace_id(request)
         request.trace_id = trace_id
+        if request.path in {"/health", "/internal/workspace-tokens/verify"}:
+            request.portal = None
+            return self.get_response(request)
         portal = self._portal(request)
         if portal is None:
-            return error_response("未识别可信 Host 或 portal，不猜测默认端", trace_id)
+            return portal_error_response("未识别可信 Host 或 portal，不猜测默认端", trace_id)
         request.portal = portal
         return self.get_response(request)
 

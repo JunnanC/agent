@@ -1,8 +1,8 @@
-from django.urls import path
-
-from apps.core.views import HealthView
+from django.urls import include, path
 
 
 urlpatterns = [
-    path("health/", HealthView.as_view(), name="health"),
+    path("", include("apps.notifications.urls")),
+    path("", include("apps.core.urls")),
+    path("", include("apps.workspaces.urls")),
 ]
