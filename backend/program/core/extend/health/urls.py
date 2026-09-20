@@ -1,6 +1,6 @@
 from django.urls import path
 
-from core.health.views import LiveHealthView, ReadyHealthView
+from core.extend.health.views import LiveHealthView, ReadyHealthView
 
 app_name = "health"
 

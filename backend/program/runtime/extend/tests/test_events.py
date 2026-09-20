@@ -4,7 +4,7 @@ import json
 import unittest
 from uuid import uuid4
 
-from runtime.events import SSEEvent, SSEEventType, SSEStage
+from runtime.extend.events import SSEEvent, SSEEventType, SSEStage
 
 
 class SSEEventTests(unittest.TestCase):

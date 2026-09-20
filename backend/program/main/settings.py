@@ -37,8 +37,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
-    "core",
-    "runtime",
+    "core.apps.CoreConfig",
+    "runtime.apps.RuntimeConfig",
 ]
 
 MIDDLEWARE = [
@@ -96,8 +96,8 @@ USE_I18N = True
 USE_TZ = True
 
 REST_FRAMEWORK = {
-    "EXCEPTION_HANDLER": "core.response.error.api_exception_handler",
-    "DEFAULT_PAGINATION_CLASS": "core.response.pagination.StandardPagination",
+    "EXCEPTION_HANDLER": "core.extend.response.error.api_exception_handler",
+    "DEFAULT_PAGINATION_CLASS": "core.extend.response.pagination.StandardPagination",
     "PAGE_SIZE": 20,
 }
 

@@ -8,7 +8,7 @@ from rest_framework import exceptions, status
 from rest_framework.response import Response
 from rest_framework.views import exception_handler
 
-from core.response.success import get_trace_id
+from core.extend.response.success import get_trace_id
 
 logger = logging.getLogger(__name__)
 

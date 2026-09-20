@@ -1,7 +1,7 @@
 """Shared API response helpers following the v2 response contract."""
 
-from core.response.error import error_response
-from core.response.success import (
+from core.extend.response.error import error_response
+from core.extend.response.success import (
     accepted_response,
     created_response,
     get_trace_id,
