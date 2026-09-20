@@ -1,3 +1,7 @@
 .idea/
 *.sqlite3
 __pycache__/
+.env
+.env.*
+!.env.example
+openapi.json
