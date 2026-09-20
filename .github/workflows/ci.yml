@@ -124,6 +124,13 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+          cat >> ~/.ssh/config << 'EOF'
+          Host *
+            ServerAliveInterval 30
+            ServerAliveCountMax 120
+            ConnectTimeout 10
+          EOF
+          chmod 600 ~/.ssh/config
 
       - name: 部署到生产环境
         run: |
