@@ -36,7 +36,7 @@ services:
       - --worker-class=gthread
       - --timeout=120
       - --graceful-timeout=30
-      - --keepalive=5
+      - --keep-alive=5
       - --access-logfile=-
       - --error-logfile=-
     healthcheck:
