@@ -9,7 +9,7 @@ on:
 env:
   PYTHON_VERSION: "3.12"
   REGISTRY: ghcr.io
-  IMAGE_NAME: ghcr.io/${{ github.repository }}
+  IMAGE_NAME: ghcr.io/junnanc/agent
 
 jobs:
   lock-check:
@@ -129,7 +129,7 @@ jobs:
             set -e
             echo "=== 拉取最新镜像 ==="
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker pull ghcr.io/${{ github.repository }}:latest
+            docker pull ghcr.io/junnanc/agent:latest
 
             echo "=== 收集静态文件 ==="
             cd /opt/edutech
@@ -137,11 +137,11 @@ jobs:
               --env-file backend/.env.prod \
               -e DJANGO_SETTINGS_MODULE=config.settings.prod \
               -v "$(pwd)/backend/staticfiles:/app/staticfiles" \
-              ghcr.io/${{ github.repository }}:latest \
+              ghcr.io/junnanc/agent:latest \
               python manage.py collectstatic --noinput 2>/dev/null || echo "静态文件收集跳过"
 
             echo "=== 部署 Swarm Stack ==="
-            BACKEND_IMAGE=ghcr.io/${{ github.repository }}:latest \
+            BACKEND_IMAGE=ghcr.io/junnanc/agent:latest \
               docker stack deploy -c docker-compose.prod.yml edutech --prune
 
             echo "=== 部署完成 ==="
