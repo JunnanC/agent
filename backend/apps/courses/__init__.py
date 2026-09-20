@@ -1,0 +1,1 @@
+"""Courses bounded context."""

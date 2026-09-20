@@ -1,0 +1,1 @@
+"""labtemplates module placeholder."""

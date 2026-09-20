@@ -1,0 +1,1 @@
+"""Accounts bounded context."""

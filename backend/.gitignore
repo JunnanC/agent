@@ -3,3 +3,11 @@ __pycache__/
 .env
 .env.*
 !.env.example
+*.py[cod]
+.venv/
+env/
+db.sqlite3
+*.log
+.vscode/
+htmlcov/
+.coverage

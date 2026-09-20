@@ -1,0 +1,1 @@
+"""courses module placeholder."""

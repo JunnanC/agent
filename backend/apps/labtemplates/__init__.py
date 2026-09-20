@@ -1,0 +1,1 @@
+"""Lab templates bounded context."""
