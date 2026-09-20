@@ -61,7 +61,10 @@ jobs:
         run: pip install --no-cache-dir uv
       - name: 安装项目依赖
         working-directory: backend
-        run: uv pip install --system ".[dev]" || uv pip install --system . pytest pytest-django pytest-cov
+        run: |
+          uv pip install --system .
+          uv pip install --system ".[dev]"
+          uv pip install --system pytest pytest-django pytest-cov
       - name: 运行测试
         working-directory: backend
         env:
