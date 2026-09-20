@@ -19,6 +19,8 @@ jobs:
       image: python:3.12-slim
     steps:
       - uses: actions/checkout@v4
+      - name: 安装系统依赖
+        run: apt-get update && apt-get install -y --no-install-recommends pkg-config gcc libmariadb-dev-compat
       - name: 安装 uv
         run: pip install --no-cache-dir uv==0.12.17
       - name: 校验 uv.lock 与 pyproject.toml 一致性
