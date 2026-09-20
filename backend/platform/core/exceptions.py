@@ -7,7 +7,7 @@ from django.http import HttpRequest, JsonResponse
 from rest_framework import exceptions, status
 from rest_framework.views import exception_handler
 
-from core.responses import error_response, get_trace_id
+from core.response import error_response, get_trace_id
 
 logger = logging.getLogger(__name__)
 

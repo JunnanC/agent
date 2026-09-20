@@ -1,7 +1,7 @@
 from django.urls import path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
-from core.views import PlatformHealthView
+from core.health.views import PlatformHealthView
 
 app_name = "core"
 

@@ -7,8 +7,8 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.views import APIView
 
-from core.responses import error_response, success_response
-from core.serializers import HealthResponseSerializer
+from core.health.serializers import HealthResponseSerializer
+from core.response import error_response, success_response
 
 
 class LiveHealthView(APIView):

@@ -3,12 +3,9 @@
 from django.contrib import admin
 from django.urls import include, path
 
-from core.views import LiveHealthView, ReadyHealthView
-
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("health/live", LiveHealthView.as_view(), name="health-live"),
-    path("health/ready", ReadyHealthView.as_view(), name="health-ready"),
+    path("health/", include("core.health.urls")),
     path("api/v2/", include("core.urls")),
 ]
 

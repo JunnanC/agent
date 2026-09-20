@@ -4,16 +4,7 @@ from typing import Any
 
 from rest_framework.response import Response
 
-
-def get_trace_id(request: Any) -> str:
-    return getattr(request, "trace_id", "")
-
-
-def success_response(data: Any, request: Any, *, status_code: int = 200) -> Response:
-    return Response(
-        {"data": data, "meta": {"trace_id": get_trace_id(request)}},
-        status=status_code,
-    )
+from core.response.success import get_trace_id
 
 
 def error_response(
@@ -25,6 +16,7 @@ def error_response(
     detail: Any = None,
     retryable: bool = False,
 ) -> Response:
+    """Return the stable v2 error envelope."""
     return Response(
         {
             "error": {
