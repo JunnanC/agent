@@ -80,7 +80,9 @@ services:
   # ── Celery Worker ───────────────────────────────────────
   worker:
     <<: [*backend-image, *backend-env, *backend-deploy, *backend-secrets, *backend-entrypoint]
-    command: ["celery", "-A", "config", "worker", "--loglevel=INFO", "--concurrency=4"]
+    # -Q 必须覆盖 CELERY_TASK_ROUTES 指向的全部队列：
+    # worker 默认只消费 CELERY_TASK_DEFAULT_QUEUE，漏配会让任务静默积压而不报错。
+    command: ["celery", "-A", "config", "worker", "--loglevel=INFO", "--concurrency=4", "-Q", "celery,maintenance,orchestration,agent"]
     healthcheck:
       disable: true
     deploy:
@@ -97,6 +99,18 @@ services:
       disable: true
     deploy:
       replicas: 1
+
+  # ── ASGI 入口（SSE 事件流）──────────────────────
+  # 暂未启用：镜像尚未包含 uvicorn，且 config.asgi 尚未接入 SSE。
+  # 启用前需同时完成：依赖加入 uvicorn、nginx 将 SSE 路由代理到本服务、
+  # 确认与 api 服务共享同一套 secrets 与 entrypoint。
+  # asgi:
+  #   <<: [*backend-image, *backend-env, *backend-deploy, *backend-secrets, *backend-entrypoint]
+  #   command: ["uvicorn", "config.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+  #   healthcheck:
+  #     disable: true
+  #   deploy:
+  #     replicas: 1
 
   # ── MinIO 对象存储 ──────────────────────────────────────
   minio:

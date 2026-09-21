@@ -32,6 +32,7 @@ packages = [
   "apps.common",
   "apps.identity",
   "apps.membership",
+  "apps.teaching",
 ]
 
 [tool.ruff]

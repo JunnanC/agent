@@ -103,7 +103,7 @@ services:
 
   worker:
     <<: *backend-service
-    command: ["celery", "-A", "config", "worker", "--loglevel=INFO"]
+    command: ["celery", "-A", "config", "worker", "--loglevel=INFO", "-Q", "celery,maintenance,orchestration,agent"]
 
   beat:
     <<: *backend-service
