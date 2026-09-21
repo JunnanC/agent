@@ -62,19 +62,25 @@ jobs:
         working-directory: backend
         run: |
           pip-compile --no-emit-index-url --output-file=/tmp/base.txt requirements/base.in
-          diff <(grep -v "^#" requirements/base.txt) <(grep -v "^#" /tmp/base.txt)
+          grep -v "^#" requirements/base.txt > /tmp/c.txt
+          grep -v "^#" /tmp/base.txt > /tmp/g.txt
+          diff /tmp/c.txt /tmp/g.txt
 
       - name: Lock check — dev.txt
         working-directory: backend
         run: |
           pip-compile --no-emit-index-url --output-file=/tmp/dev.txt requirements/dev.in
-          diff <(grep -v "^#" requirements/dev.txt) <(grep -v "^#" /tmp/dev.txt)
+          grep -v "^#" requirements/dev.txt > /tmp/c.txt
+          grep -v "^#" /tmp/dev.txt > /tmp/g.txt
+          diff /tmp/c.txt /tmp/g.txt
 
       - name: Lock check — prod.txt
         working-directory: backend
         run: |
           pip-compile --no-emit-index-url --output-file=/tmp/prod.txt requirements/prod.in
-          diff <(grep -v "^#" requirements/prod.txt) <(grep -v "^#" /tmp/prod.txt)
+          grep -v "^#" requirements/prod.txt > /tmp/c.txt
+          grep -v "^#" /tmp/prod.txt > /tmp/g.txt
+          diff /tmp/c.txt /tmp/g.txt
 
       # ── Lint ──
       - name: Ruff lint
