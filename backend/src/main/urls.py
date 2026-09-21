@@ -2,6 +2,7 @@
 
 from django.contrib import admin
 from django.urls import include, path
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
 from common.health.views import PlatformHealthView
 
@@ -12,12 +13,15 @@ urlpatterns = [
         "api/v2/",
         include(
             (
-                [path("platform/health", PlatformHealthView.as_view(), name="platform-health")],
+                [path("admin/health", PlatformHealthView.as_view(), name="admin-health")],
                 "api",
             ),
             namespace="api",
         ),
     ),
+    path("api/v2/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("api/v2/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path("api/v2/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
 ]
 
 handler400 = "common.response.error.bad_request_view"

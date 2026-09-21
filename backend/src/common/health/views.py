@@ -5,14 +5,17 @@ from django.db.utils import DatabaseError
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.views import APIView
+from drf_spectacular.utils import OpenApiTypes, extend_schema
 
 from common.response import error_response, success_response
+from common.portal.permissions import PortalPermission
 
 
 class LiveHealthView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
 
+    @extend_schema(responses=OpenApiTypes.OBJECT, tags=["health"])
     def get(self, request):
         return success_response({"status": "ok"}, request)
 
@@ -21,6 +24,7 @@ class ReadyHealthView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
 
+    @extend_schema(responses=OpenApiTypes.OBJECT, tags=["health"])
     def get(self, request):
         try:
             with connection.cursor() as cursor:
@@ -41,8 +45,10 @@ class ReadyHealthView(APIView):
 
 
 class PlatformHealthView(ReadyHealthView):
+    allowed_portals = frozenset(("ADMIN",))
     authentication_classes = APIView.authentication_classes
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminUser, PortalPermission]
 
+    @extend_schema(responses=OpenApiTypes.OBJECT, tags=["admin"])
     def get(self, request):
         return super().get(request)
