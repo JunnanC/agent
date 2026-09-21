@@ -1,17 +1,37 @@
 # ──────────────────────────────────────────────────────────
-# EduTech 生产环境 Docker Compose
+# EduTech 生产环境 Docker Compose (Swarm)
 # MySQL / Redis 使用服务器已有实例（external network）
+# 敏感值通过 Docker secrets 注入，不进入 git
 # ──────────────────────────────────────────────────────────
 
 x-backend-image: &backend-image
   image: ${BACKEND_IMAGE:-edutech/backend:latest}
 
 x-backend-env: &backend-env
-  env_file:
-    - ./backend/.env.prod
   environment:
     DJANGO_SETTINGS_MODULE: config.settings.prod
-    TZ: ${TZ:-Asia/Shanghai}
+    DJANGO_DEBUG: "false"
+    DJANGO_ALLOWED_HOSTS: "47.114.40.7,localhost"
+    MYSQL_HOST: mysql8
+    MYSQL_PORT: "3306"
+    MYSQL_NAME: edutech
+    MYSQL_USER: edutech
+    MINIO_ENDPOINT: "minio:9000"
+    MINIO_SECURE: "false"
+    MINIO_GENERAL_BUCKET: edutech-general
+    MINIO_ARCHIVE_BUCKET: edutech-archive
+    MINIO_SNAPSHOT_BUCKET: edutech-snapshot
+    MINIO_EXPORT_BUCKET: edutech-export
+    TZ: "Asia/Shanghai"
+
+x-backend-secrets: &backend-secrets
+  secrets:
+    - django_secret_key
+    - mysql_password
+    - redis_cache_url
+    - celery_broker_url
+    - minio_access_key
+    - minio_secret_key
 
 x-backend-deploy: &backend-deploy
   restart: always
@@ -22,10 +42,15 @@ x-backend-deploy: &backend-deploy
     - minio
     - minio-init
 
+x-backend-entrypoint: &backend-entrypoint
+  entrypoint: ["/opt/edutech/deploy/docker-entrypoint.sh"]
+  volumes:
+    - /opt/edutech/deploy/docker-entrypoint.sh:/opt/edutech/deploy/docker-entrypoint.sh:ro
+
 services:
   # ── Django API ──────────────────────────────────────────
   api:
-    <<: [*backend-image, *backend-env, *backend-deploy]
+    <<: [*backend-image, *backend-env, *backend-deploy, *backend-secrets, *backend-entrypoint]
     command:
       - gunicorn
       - config.wsgi:application
@@ -45,7 +70,7 @@ services:
       retries: 3
       start_period: 15s
     deploy:
-      replicas: ${API_REPLICAS:-2}
+      replicas: 2
       resources:
         limits:
           memory: 512M
@@ -54,8 +79,12 @@ services:
 
   # ── Celery Worker ───────────────────────────────────────
   worker:
-    <<: [*backend-image, *backend-env, *backend-deploy]
+    <<: [*backend-image, *backend-env, *backend-deploy, *backend-secrets, *backend-entrypoint]
+    # -Q 必须覆盖 CELERY_TASK_ROUTES 指向的全部队列：
+    # worker 默认只消费 CELERY_TASK_DEFAULT_QUEUE，漏配会让任务静默积压而不报错。
     command: ["celery", "-A", "config", "worker", "--loglevel=INFO", "--concurrency=4", "-Q", "celery,maintenance,orchestration,agent"]
+    healthcheck:
+      disable: true
     deploy:
       replicas: 1
       resources:
@@ -64,19 +93,35 @@ services:
 
   # ── Celery Beat ─────────────────────────────────────────
   beat:
-    <<: [*backend-image, *backend-env, *backend-deploy]
+    <<: [*backend-image, *backend-env, *backend-deploy, *backend-secrets, *backend-entrypoint]
     command: ["celery", "-A", "config", "beat", "--loglevel=INFO"]
+    healthcheck:
+      disable: true
     deploy:
       replicas: 1
+
+  # ── ASGI 入口（SSE 事件流）──────────────────────
+  # 暂未启用：镜像尚未包含 uvicorn，且 config.asgi 尚未接入 SSE。
+  # 启用前需同时完成：依赖加入 uvicorn、nginx 将 SSE 路由代理到本服务、
+  # 确认与 api 服务共享同一套 secrets 与 entrypoint。
+  # asgi:
+  #   <<: [*backend-image, *backend-env, *backend-deploy, *backend-secrets, *backend-entrypoint]
+  #   command: ["uvicorn", "config.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+  #   healthcheck:
+  #     disable: true
+  #   deploy:
+  #     replicas: 1
 
   # ── MinIO 对象存储 ──────────────────────────────────────
   minio:
     image: quay.io/minio/minio:latest
     command: ["server", "/data", "--console-address", ":9001"]
     environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
-      TZ: ${TZ:-Asia/Shanghai}
+      TZ: "Asia/Shanghai"
+    secrets:
+      - minio_access_key
+      - minio_secret_key
+    entrypoint: ["/bin/sh", "-c", "export MINIO_ROOT_USER=$$(cat /run/secrets/minio_access_key) && export MINIO_ROOT_PASSWORD=$$(cat /run/secrets/minio_secret_key) && exec /usr/bin/minio server /data --console-address :9001"]
     volumes:
       - minio-data:/data
     healthcheck:
@@ -95,27 +140,16 @@ services:
     image: quay.io/minio/minio:latest
     depends_on:
       - minio
+    secrets:
+      - minio_access_key
+      - minio_secret_key
     environment:
       MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
-      MINIO_GENERAL_BUCKET: ${MINIO_GENERAL_BUCKET}
-      MINIO_ARCHIVE_BUCKET: ${MINIO_ARCHIVE_BUCKET}
-      MINIO_SNAPSHOT_BUCKET: ${MINIO_SNAPSHOT_BUCKET}
-      MINIO_EXPORT_BUCKET: ${MINIO_EXPORT_BUCKET}
-    entrypoint: >
-      sh -c '
-      mc alias set local http://$$MINIO_ENDPOINT $$MINIO_ACCESS_KEY $$MINIO_SECRET_KEY &&
-      mc mb --ignore-existing local/$$MINIO_GENERAL_BUCKET &&
-      mc mb --ignore-existing local/$$MINIO_ARCHIVE_BUCKET &&
-      mc mb --ignore-existing local/$$MINIO_SNAPSHOT_BUCKET &&
-      mc mb --ignore-existing local/$$MINIO_EXPORT_BUCKET &&
-      mc anonymous set none local/$$MINIO_GENERAL_BUCKET &&
-      mc anonymous set none local/$$MINIO_ARCHIVE_BUCKET &&
-      mc anonymous set none local/$$MINIO_SNAPSHOT_BUCKET &&
-      mc anonymous set none local/$$MINIO_EXPORT_BUCKET &&
-      echo "MinIO buckets initialized"
-      '
+      MINIO_GENERAL_BUCKET: edutech-general
+      MINIO_ARCHIVE_BUCKET: edutech-archive
+      MINIO_SNAPSHOT_BUCKET: edutech-snapshot
+      MINIO_EXPORT_BUCKET: edutech-export
+    entrypoint: ["/bin/sh", "-c", "export MINIO_ACCESS_KEY=$$(cat /run/secrets/minio_access_key) && export MINIO_SECRET_KEY=$$(cat /run/secrets/minio_secret_key) && mc alias set local http://$$MINIO_ENDPOINT $$MINIO_ACCESS_KEY $$MINIO_SECRET_KEY && mc mb --ignore-existing local/$$MINIO_GENERAL_BUCKET && mc mb --ignore-existing local/$$MINIO_ARCHIVE_BUCKET && mc mb --ignore-existing local/$$MINIO_SNAPSHOT_BUCKET && mc mb --ignore-existing local/$$MINIO_EXPORT_BUCKET && mc anonymous set none local/$$MINIO_GENERAL_BUCKET && mc anonymous set none local/$$MINIO_ARCHIVE_BUCKET && mc anonymous set none local/$$MINIO_SNAPSHOT_BUCKET && mc anonymous set none local/$$MINIO_EXPORT_BUCKET && echo MinIO buckets initialized"]
     networks:
       - edutech-net
 
@@ -141,7 +175,7 @@ services:
 
 networks:
   edutech-net:
-    driver: bridge
+    driver: overlay
     attachable: true
   edutech-infra:
     external: true
@@ -149,3 +183,17 @@ networks:
 volumes:
   minio-data:
   nginx-logs:
+
+secrets:
+  django_secret_key:
+    external: true
+  mysql_password:
+    external: true
+  redis_cache_url:
+    external: true
+  celery_broker_url:
+    external: true
+  minio_access_key:
+    external: true
+  minio_secret_key:
+    external: true
