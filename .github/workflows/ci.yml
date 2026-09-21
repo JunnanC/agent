@@ -109,12 +109,10 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      # ── Lock check ──
-      - name: Lock check — package-lock.json
+      # ── Lock check (npm ci validates lock consistency) ─
+      - name: Lock check — npm ci
         working-directory: frontend
-        run: |
-          npm install --package-lock-only --ignore-scripts
-          git diff --exit-code -- package-lock.json
+        run: npm ci --ignore-scripts
 
       # ── Lint ──
       - name: ESLint
