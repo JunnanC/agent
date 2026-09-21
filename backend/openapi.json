@@ -4,7 +4,7 @@
         "title": "Education Experiment Platform API",
         "version": "2.0.0",
         "x-openapi-revision": "2026-09-20.b6-pending-freeze",
-        "x-generated-at": "2026-09-20T17:22:19+08:00",
+        "x-generated-at": "2026-09-21T14:16:43+08:00",
         "x-contract-status": "pending-freeze; replace after contract freeze"
     },
     "paths": {
@@ -36,6 +36,15 @@
             "post": {
                 "operationId": "api_v2_files_download_grants_create",
                 "parameters": [
+                    {
+                        "in": "header",
+                        "name": "Idempotency-Key",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Client-generated idempotency key for the write operation.",
+                        "required": true
+                    },
                     {
                         "in": "path",
                         "name": "asset_id",
@@ -75,6 +84,20 @@
                 ],
                 "responses": {
                     "201": {
+                        "headers": {
+                            "X-Idempotent-Replay": {
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "description": "Set to true when the response replays the original grant."
+                            },
+                            "X-Trace-Id": {
+                                "description": "Trace ID for the current request.",
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -82,7 +105,89 @@
                                 }
                             }
                         },
-                        "description": "",
+                        "description": "Grant issued or replayed."
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                }
+                            }
+                        },
+                        "description": "Idempotency-Key is missing or invalid, or request validation failed.",
+                        "headers": {
+                            "X-Trace-Id": {
+                                "description": "Trace ID for the current request.",
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                }
+                            }
+                        },
+                        "description": "CSRF is required or the actor is not allowed to download the object.",
+                        "headers": {
+                            "X-Trace-Id": {
+                                "description": "Trace ID for the current request.",
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                }
+                            }
+                        },
+                        "description": "Object asset does not exist.",
+                        "headers": {
+                            "X-Trace-Id": {
+                                "description": "Trace ID for the current request.",
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                }
+                            }
+                        },
+                        "description": "The Idempotency-Key was already used with a different request fingerprint.",
+                        "headers": {
+                            "X-Trace-Id": {
+                                "description": "Trace ID for the current request.",
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                }
+                            }
+                        },
+                        "description": "The in-memory idempotency store is saturated.",
                         "headers": {
                             "X-Trace-Id": {
                                 "description": "Trace ID for the current request.",
@@ -409,6 +514,30 @@
                     "expires_at",
                     "max_uses",
                     "one_time_token"
+                ]
+            },
+            "ErrorEnvelope": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "details": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "trace_id": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "code",
+                    "details",
+                    "message",
+                    "trace_id"
                 ]
             },
             "UseEnum": {

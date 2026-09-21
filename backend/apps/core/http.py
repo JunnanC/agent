@@ -45,3 +45,16 @@ def idempotency_key_required(request, route: str) -> Response:
         },
         status=400,
     )
+
+
+def idempotency_key_invalid(request, route: str) -> Response:
+    trace_id = getattr(request, "trace_id", "") or str(uuid.uuid4())
+    return JsonResponse(
+        {
+            "code": "IDEMPOTENCY_KEY_INVALID",
+            "message": "Idempotency-Key 必须为 1-255 个可见 ASCII 字符",
+            "details": {"header": "Idempotency-Key", "route": route},
+            "trace_id": trace_id,
+        },
+        status=400,
+    )

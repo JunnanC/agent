@@ -9,6 +9,13 @@ class DownloadGrantRequestSerializer(serializers.Serializer):
     )
 
 
+class ErrorEnvelopeSerializer(serializers.Serializer):
+    code = serializers.CharField(required=True)
+    message = serializers.CharField(required=True)
+    details = serializers.DictField(required=True)
+    trace_id = serializers.CharField(required=True)
+
+
 class DownloadGrantResponseSerializer(serializers.Serializer):
     asset_id = serializers.CharField(required=True)
     one_time_token = serializers.CharField(required=True)
