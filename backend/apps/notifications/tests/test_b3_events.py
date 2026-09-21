@@ -3,6 +3,7 @@ from ipaddress import ip_network
 
 from django.test import SimpleTestCase, override_settings
 
+from apps.core.testing import assert_event_envelope
 from apps.notifications.adapters import InMemoryEventSource
 from apps.notifications.events import (
     EVENT_PLATFORM_ALERT,
@@ -92,10 +93,7 @@ class EventStreamTests(SimpleTestCase):
         self.assertEqual(lines[1], "event: task.status_changed")
         self.assertTrue(lines[2].startswith("data: "))
         payload = json.loads(lines[2][len("data: ") :])
-        self.assertEqual(
-            set(payload),
-            {"course_id", "subject_id", "occurred_at", "data", "trace_id"},
-        )
+        assert_event_envelope(payload)
         self.assertNotIn("id", payload)
         self.assertNotIn("type", payload)
 

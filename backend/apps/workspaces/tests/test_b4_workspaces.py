@@ -4,6 +4,7 @@ from ipaddress import ip_network
 
 from django.test import SimpleTestCase, override_settings
 
+from apps.core.testing import assert_error_envelope
 from apps.workspaces.adapters import fake_workspace_token_adapter
 
 
@@ -48,7 +49,7 @@ class B4WorkspaceTests(SimpleTestCase):
         self.assertEqual(response.status_code, 400)
         payload = json.loads(response.content)
         self.assertEqual(payload["code"], "IDEMPOTENCY_KEY_REQUIRED")
-        self.assertEqual(set(payload), {"code", "message", "details", "trace_id"})
+        assert_error_envelope(payload)
 
     def test_issue_is_idempotent_and_returns_token_once(self):
         first = self.issue()

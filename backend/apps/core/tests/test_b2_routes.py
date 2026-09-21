@@ -7,6 +7,7 @@ from django.test import SimpleTestCase, override_settings
 from rest_framework.test import APIRequestFactory
 
 from apps.core.adapters.fake import FAKE_DOWNLOAD_GRANT_REPOSITORY
+from apps.core.testing import assert_error_envelope as assert_core_error_envelope
 from apps.core.views import DownloadGrantView
 
 
@@ -28,12 +29,8 @@ class B2RouteTests(SimpleTestCase):
     def assert_error_envelope(self, response, status_code, code):
         self.assertEqual(response.status_code, status_code)
         payload = json.loads(response.content)
-        self.assertEqual(
-            set(payload),
-            {"code", "message", "details", "trace_id"},
-        )
+        assert_core_error_envelope(payload)
         self.assertEqual(payload["code"], code)
-        self.assertTrue(payload["trace_id"])
 
     def test_health_is_exact_top_level_path(self):
         response = self.client.get("/health")
