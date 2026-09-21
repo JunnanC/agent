@@ -1,0 +1,1 @@
+"""Project foundation tests."""

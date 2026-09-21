@@ -1,0 +1,233 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "Education Agent Platform API",
+        "version": "v2-p00",
+        "description": "P00 infrastructure contract. Business operations are added in later stages."
+    },
+    "paths": {
+        "/api/v2/events/stream": {
+            "get": {
+                "operationId": "events_stream_retrieve",
+                "summary": "Portal event stream",
+                "tags": [
+                    "events"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Server-sent event stream"
+                    }
+                },
+                "x-portals": [
+                    "USER",
+                    "TEACHING",
+                    "PLATFORM"
+                ]
+            }
+        },
+        "/api/v2/health": {
+            "get": {
+                "operationId": "health_retrieve",
+                "summary": "Process liveness",
+                "tags": [
+                    "system"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HealthResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-portals": [
+                    "USER",
+                    "TEACHING",
+                    "PLATFORM"
+                ]
+            }
+        },
+        "/api/v2/health/ready": {
+            "get": {
+                "operationId": "health_ready_retrieve",
+                "summary": "MySQL readiness",
+                "tags": [
+                    "system"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReadinessResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "503": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorEnvelope"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                },
+                "x-portals": [
+                    "USER",
+                    "TEACHING",
+                    "PLATFORM"
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ErrorBody": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "detail": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "trace_id": {
+                        "type": "string"
+                    },
+                    "retryable": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "code",
+                    "detail",
+                    "message",
+                    "retryable",
+                    "trace_id"
+                ]
+            },
+            "ErrorEnvelope": {
+                "type": "object",
+                "properties": {
+                    "error": {
+                        "$ref": "#/components/schemas/ErrorBody"
+                    }
+                },
+                "required": [
+                    "error"
+                ]
+            },
+            "HealthData": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string"
+                    },
+                    "service": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "openapi_revision": {
+                        "type": "string"
+                    },
+                    "git_revision": {
+                        "type": "string"
+                    },
+                    "portal": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "git_revision",
+                    "openapi_revision",
+                    "portal",
+                    "service",
+                    "status",
+                    "version"
+                ]
+            },
+            "HealthResponse": {
+                "type": "object",
+                "properties": {
+                    "data": {
+                        "$ref": "#/components/schemas/HealthData"
+                    },
+                    "meta": {
+                        "$ref": "#/components/schemas/TraceMeta"
+                    }
+                },
+                "required": [
+                    "data",
+                    "meta"
+                ]
+            },
+            "ReadinessChecks": {
+                "type": "object",
+                "properties": {
+                    "mysql": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "mysql"
+                ]
+            },
+            "ReadinessData": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string"
+                    },
+                    "checks": {
+                        "$ref": "#/components/schemas/ReadinessChecks"
+                    }
+                },
+                "required": [
+                    "checks",
+                    "status"
+                ]
+            },
+            "ReadinessResponse": {
+                "type": "object",
+                "properties": {
+                    "data": {
+                        "$ref": "#/components/schemas/ReadinessData"
+                    },
+                    "meta": {
+                        "$ref": "#/components/schemas/TraceMeta"
+                    }
+                },
+                "required": [
+                    "data",
+                    "meta"
+                ]
+            },
+            "TraceMeta": {
+                "type": "object",
+                "properties": {
+                    "trace_id": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "trace_id"
+                ]
+            }
+        }
+    }
+}

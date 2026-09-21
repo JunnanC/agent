@@ -1,23 +1,10 @@
-"""
-URL configuration for education_experiment_platform project.
+from django.urls import include, path, re_path
 
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.1/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
-
-from django.contrib import admin
-from django.urls import path
+from .api import api_not_found
+from .metrics import metrics
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path("api/v2/", include("education_experiment_platform.api_urls")),
+    path("internal/metrics", metrics, name="metrics"),
+    re_path(r"^api/v2/(?P<_path>.*)$", api_not_found, name="api-not-found"),
 ]

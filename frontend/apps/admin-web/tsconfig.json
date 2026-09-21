@@ -1,0 +1,6 @@
+{
+  "extends": "@edu/config/tsconfig.json",
+  "include": ["src", "../../vite-env.d.ts", "vite.config.ts"],
+  "compilerOptions": { "composite": true }
+}
+

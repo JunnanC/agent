@@ -1,0 +1,201 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  - name: django-api
+    url: http://django:8000
+    connect_timeout: 5000
+    read_timeout: 60000
+    write_timeout: 60000
+    retries: 0
+    routes:
+      - name: user-browser-api
+        hosts: [user.localhost, user.example.edu]
+        paths: [/api/v2]
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: request-transformer
+            config:
+              remove:
+                headers: [X-Portal, X-Auth-Context, X-Client-Id, X-Scopes, X-Proxy-Context]
+              add:
+                headers: ["X-Portal:USER", "X-Proxy-Context:ingress-v1"]
+          - name: rate-limiting
+            config: { minute: 600, policy: local, fault_tolerant: true }
+      - name: teacher-browser-api
+        hosts: [teacher.localhost, teacher.example.edu]
+        paths: [/api/v2]
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: request-transformer
+            config:
+              remove:
+                headers: [X-Portal, X-Auth-Context, X-Client-Id, X-Scopes, X-Proxy-Context]
+              add:
+                headers: ["X-Portal:TEACHING", "X-Proxy-Context:ingress-v1"]
+          - name: rate-limiting
+            config: { minute: 300, policy: local, fault_tolerant: true }
+      - name: admin-browser-api
+        hosts: [admin.localhost, admin.example.edu]
+        paths: [/api/v2]
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: request-transformer
+            config:
+              remove:
+                headers: [X-Portal, X-Auth-Context, X-Client-Id, X-Scopes, X-Proxy-Context]
+              add:
+                headers: ["X-Portal:PLATFORM", "X-Proxy-Context:ingress-v1"]
+          - name: rate-limiting
+            config: { minute: 180, policy: local, fault_tolerant: true }
+      - name: integration-token
+        hosts: [api.localhost, api.example.edu]
+        paths: [/api/v2/integrations/oauth/token]
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: request-transformer
+            config:
+              remove:
+                headers: [X-Portal, X-Auth-Context, X-Client-Id, X-Scopes, X-Proxy-Context]
+              add:
+                headers: ["X-Auth-Context:INTEGRATION", "X-Proxy-Context:ingress-v1"]
+          - name: rate-limiting
+            config: { minute: 30, policy: local, fault_tolerant: false }
+      - name: integration-open-api
+        hosts: [api.localhost, api.example.edu]
+        paths: [/api/v2/integrations/open]
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: request-transformer
+            config:
+              remove:
+                headers: [X-Portal, X-Auth-Context, X-Client-Id, X-Scopes, X-Proxy-Context]
+              add:
+                headers: ["X-Auth-Context:INTEGRATION", "X-Proxy-Context:ingress-v1"]
+          - name: rate-limiting
+            config: { minute: 120, policy: local, fault_tolerant: false }
+
+  - name: django-events
+    url: http://django:8000
+    connect_timeout: 5000
+    read_timeout: 3600000
+    write_timeout: 60000
+    retries: 0
+    routes:
+      - name: user-events
+        hosts: [user.localhost, user.example.edu]
+        paths: [/api/v2/events/stream]
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: request-transformer
+            config:
+              remove: { headers: [X-Portal, X-Auth-Context, X-Client-Id, X-Scopes, X-Proxy-Context] }
+              add: { headers: ["X-Portal:USER", "X-Proxy-Context:ingress-v1"] }
+      - name: teacher-events
+        hosts: [teacher.localhost, teacher.example.edu]
+        paths: [/api/v2/events/stream]
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: request-transformer
+            config:
+              remove: { headers: [X-Portal, X-Auth-Context, X-Client-Id, X-Scopes, X-Proxy-Context] }
+              add: { headers: ["X-Portal:TEACHING", "X-Proxy-Context:ingress-v1"] }
+      - name: admin-events
+        hosts: [admin.localhost, admin.example.edu]
+        paths: [/api/v2/events/stream]
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: request-transformer
+            config:
+              remove: { headers: [X-Portal, X-Auth-Context, X-Client-Id, X-Scopes, X-Proxy-Context] }
+              add: { headers: ["X-Portal:PLATFORM", "X-Proxy-Context:ingress-v1"] }
+
+  - name: django-workspace
+    url: http://django:8000
+    connect_timeout: 5000
+    read_timeout: 600000
+    write_timeout: 600000
+    retries: 0
+    routes:
+      - name: user-workspace
+        hosts: [user.localhost, user.example.edu]
+        paths: [/workspace]
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: request-transformer
+            config:
+              remove: { headers: [X-Portal, X-Auth-Context, X-Client-Id, X-Scopes, X-Proxy-Context] }
+              add: { headers: ["X-Portal:USER", "X-Proxy-Context:ingress-v1"] }
+      - name: teacher-workspace
+        hosts: [teacher.localhost, teacher.example.edu]
+        paths: [/workspace]
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: request-transformer
+            config:
+              remove: { headers: [X-Portal, X-Auth-Context, X-Client-Id, X-Scopes, X-Proxy-Context] }
+              add: { headers: ["X-Portal:TEACHING", "X-Proxy-Context:ingress-v1"] }
+
+  - name: django-files
+    url: http://django:8000
+    connect_timeout: 5000
+    read_timeout: 300000
+    write_timeout: 300000
+    retries: 0
+    routes:
+      - name: user-files
+        hosts: [user.localhost, user.example.edu]
+        paths: [/files]
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: request-transformer
+            config:
+              remove: { headers: [X-Portal, X-Auth-Context, X-Client-Id, X-Scopes, X-Proxy-Context] }
+              add: { headers: ["X-Portal:USER", "X-Proxy-Context:ingress-v1"] }
+      - name: teacher-files
+        hosts: [teacher.localhost, teacher.example.edu]
+        paths: [/files]
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: request-transformer
+            config:
+              remove: { headers: [X-Portal, X-Auth-Context, X-Client-Id, X-Scopes, X-Proxy-Context] }
+              add: { headers: ["X-Portal:TEACHING", "X-Proxy-Context:ingress-v1"] }
+      - name: admin-files
+        hosts: [admin.localhost, admin.example.edu]
+        paths: [/files]
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: request-transformer
+            config:
+              remove: { headers: [X-Portal, X-Auth-Context, X-Client-Id, X-Scopes, X-Proxy-Context] }
+              add: { headers: ["X-Portal:PLATFORM", "X-Proxy-Context:ingress-v1"] }
+
+plugins:
+  - name: correlation-id
+    config:
+      header_name: X-Request-ID
+      generator: uuid#counter
+      echo_downstream: true
+  - name: opentelemetry
+    config:
+      traces_endpoint: http://otel-collector:4318/v1/traces
+      resource_attributes:
+        service.name: kong
+      propagation:
+        extract: [w3c]
+        inject: [w3c]
+        default_format: w3c

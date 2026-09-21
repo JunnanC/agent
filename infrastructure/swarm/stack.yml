@@ -1,0 +1,219 @@
+version: "3.9"
+
+x-app-environment: &app-environment
+  APP_ENV: integration
+  APP_VERSION: ${APP_VERSION:-0.1.0-p00}
+  OPENAPI_REVISION: ${OPENAPI_REVISION:-v2-p00}
+  DJANGO_SETTINGS_MODULE: education_experiment_platform.settings.prod
+  DJANGO_ALLOWED_HOSTS: django,user.example.edu,teacher.example.edu,admin.example.edu,api.example.edu
+  DJANGO_TRUSTED_ORIGINS: https://user.example.edu,https://teacher.example.edu,https://admin.example.edu
+  TRUSTED_PROXY_CIDRS: 10.42.20.0/24
+  MYSQL_DATABASE: edu_platform
+  MYSQL_USER: edu_platform
+  MYSQL_HOST: ${MYSQL_HOST}
+  MYSQL_PORT: "3306"
+  REDIS_URL: ${REDIS_URL}
+  CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+  CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+  MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+  MINIO_BUCKET: edu-platform
+  CLAMAV_HOST: ${CLAMAV_HOST}
+  CLAMAV_PORT: "3310"
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+
+x-fluentd-logging: &fluentd-logging
+  driver: fluentd
+  options:
+    fluentd-address: localhost:24224
+    fluentd-async: "true"
+    tag: "edu.{{.Name}}"
+
+services:
+  nginx:
+    image: ${REGISTRY}/edu-platform-nginx:${IMAGE_TAG}
+    ports:
+      - target: 8080
+        published: 80
+        mode: ingress
+      - target: 8443
+        published: 443
+        mode: ingress
+    secrets: [tls_certificate, tls_private_key]
+    networks: [edge]
+    logging: *fluentd-logging
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-check-certificate -q -O /dev/null --header='Host: user.example.edu' https://127.0.0.1:8443/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    deploy:
+      replicas: 2
+      placement:
+        constraints: [node.labels.edu.role.edge == true]
+      resources:
+        reservations: { cpus: "0.10", memory: 64M }
+        limits: { cpus: "0.50", memory: 256M }
+      update_config: { parallelism: 1, order: start-first, failure_action: rollback }
+      rollback_config: { parallelism: 1, order: stop-first }
+
+  kong:
+    image: kong:3.9
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /run/configs/kong.yml
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+      KONG_STATUS_LISTEN: 0.0.0.0:8100
+      KONG_ADMIN_LISTEN: "off"
+    configs:
+      - source: kong_config_v1
+        target: /run/configs/kong.yml
+    networks: [edge, app]
+    logging: *fluentd-logging
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      replicas: 2
+      placement:
+        constraints: [node.labels.edu.role.edge == true]
+      resources:
+        reservations: { cpus: "0.25", memory: 256M }
+        limits: { cpus: "1.00", memory: 768M }
+      update_config: { parallelism: 1, order: start-first, failure_action: rollback }
+      rollback_config: { parallelism: 1, order: stop-first }
+
+  django:
+    image: ${REGISTRY}/edu-platform-backend:${IMAGE_TAG}
+    environment:
+      <<: *app-environment
+      DJANGO_SECRET_KEY_FILE: /run/secrets/django_secret_key
+      MYSQL_PASSWORD_FILE: /run/secrets/mysql_app_password
+    secrets: [django_secret_key, mysql_app_password]
+    networks: [app, data]
+    logging: *fluentd-logging
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-H", "X-Forwarded-Proto: https", "http://127.0.0.1:8000/api/v2/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      replicas: 3
+      placement:
+        constraints: [node.labels.edu.role.app == true]
+      resources:
+        reservations: { cpus: "0.25", memory: 256M }
+        limits: { cpus: "1.00", memory: 768M }
+      update_config: { parallelism: 1, order: start-first, failure_action: rollback }
+      rollback_config: { parallelism: 1, order: stop-first }
+
+  celery:
+    image: ${REGISTRY}/edu-platform-backend:${IMAGE_TAG}
+    command: ["celery", "-A", "education_experiment_platform", "worker", "--loglevel=INFO", "--queues=default,runtime,archive,notifications"]
+    environment:
+      <<: *app-environment
+      DJANGO_SECRET_KEY_FILE: /run/secrets/django_secret_key
+      MYSQL_PASSWORD_FILE: /run/secrets/mysql_app_password
+    secrets: [django_secret_key, mysql_app_password]
+    networks: [app, data]
+    logging: *fluentd-logging
+    deploy:
+      replicas: 2
+      placement:
+        constraints: [node.labels.edu.role.worker == true]
+      resources:
+        reservations: { cpus: "0.25", memory: 256M }
+        limits: { cpus: "1.00", memory: 768M }
+      update_config: { parallelism: 1, order: stop-first, failure_action: rollback }
+
+  fluent-bit:
+    image: cr.fluentbit.io/fluent/fluent-bit:4.0.9
+    configs:
+      - source: fluent_bit_config_v1
+        target: /fluent-bit/etc/fluent-bit.conf
+      - source: fluent_bit_redact_v1
+        target: /fluent-bit/etc/redact.lua
+    volumes:
+      - fluent-bit-buffer:/buffers
+    networks: [observability]
+    ports:
+      - target: 24224
+        published: 24224
+        protocol: tcp
+        mode: host
+    deploy:
+      mode: global
+      resources:
+        limits: { memory: 256M }
+
+  log-ingest:
+    image: ${REGISTRY}/edu-platform-backend:${IMAGE_TAG}
+    command: ["python", "-m", "education_experiment_platform.log_ingest"]
+    environment:
+      MONGODB_URI_FILE: /run/secrets/mongodb_uri
+      MONGODB_LOG_DATABASE: observability
+      MONGODB_LOG_COLLECTION: runtime_logs
+      MONGODB_LOG_TTL_DAYS: ${MONGODB_LOG_TTL_DAYS:-30}
+    secrets: [mongodb_uri]
+    networks: [observability, data]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      replicas: 2
+      placement:
+        constraints: [node.labels.edu.role.data == true]
+      resources:
+        limits: { memory: 256M }
+      update_config: { parallelism: 1, order: start-first, failure_action: rollback }
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.136.0
+    command: ["--config=/run/configs/otel.yml"]
+    configs:
+      - source: otel_config_v1
+        target: /run/configs/otel.yml
+    networks: [app, observability]
+    deploy:
+      mode: global
+      resources:
+        limits: { memory: 384M }
+
+networks:
+  edge: { driver: overlay }
+  app:
+    driver: overlay
+    internal: true
+    ipam:
+      config:
+        - subnet: 10.42.20.0/24
+  data: { driver: overlay, internal: true }
+  observability: { driver: overlay, internal: true }
+
+volumes:
+  fluent-bit-buffer: {}
+
+configs:
+  kong_config_v1:
+    external: true
+  fluent_bit_config_v1:
+    external: true
+  fluent_bit_redact_v1:
+    external: true
+  otel_config_v1:
+    external: true
+
+secrets:
+  django_secret_key:
+    external: true
+  mysql_app_password:
+    external: true
+  mongodb_uri:
+    external: true
+  tls_certificate:
+    external: true
+  tls_private_key:
+    external: true

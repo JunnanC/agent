@@ -1,0 +1,14 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/ui" },
+    { "path": "packages/api-client" },
+    { "path": "packages/auth-client" },
+    { "path": "packages/event-client" },
+    { "path": "packages/query-keys" },
+    { "path": "apps/user-web" },
+    { "path": "apps/teacher-web" },
+    { "path": "apps/admin-web" }
+  ]
+}
+

@@ -1,18 +1,23 @@
-"""
-ASGI config for education_experiment_platform project.
-
-It exposes the ASGI callable as a module-level variable named ``application``.
-
-For more information on this file, see
-https://docs.djangoproject.com/en/6.1/howto/deployment/asgi/
-"""
-
 import os
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from django.core.asgi import get_asgi_application
 
-os.environ.setdefault(
-    "DJANGO_SETTINGS_MODULE", "education_experiment_platform.settings"
-)
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "education_experiment_platform.settings.local")
 
-application = get_asgi_application()
+django_application = get_asgi_application()
+
+
+async def application(
+    scope: dict[str, Any],
+    receive: Callable[[], Awaitable[dict[str, Any]]],
+    send: Callable[[dict[str, Any]], Awaitable[None]],
+) -> None:
+    if scope["type"] == "websocket" and scope.get("path") == "/workspace/health":
+        await receive()
+        await send({"type": "websocket.accept"})
+        await send({"type": "websocket.send", "text": "workspace-gateway-ready"})
+        await send({"type": "websocket.close", "code": 1000})
+        return
+    await django_application(scope, receive, send)

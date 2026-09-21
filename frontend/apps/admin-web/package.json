@@ -1,0 +1,22 @@
+{
+  "name": "@edu/admin-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host admin.localhost --port 5175",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@edu/api-client": "*",
+    "@edu/auth-client": "*",
+    "@edu/query-keys": "*",
+    "@edu/ui": "*",
+    "@tanstack/react-query": "5.87.4",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-router-dom": "7.9.1"
+  }
+}
+

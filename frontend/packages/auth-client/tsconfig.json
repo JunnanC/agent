@@ -1,0 +1,6 @@
+{
+  "extends": "@edu/config/tsconfig.json",
+  "include": ["src"],
+  "compilerOptions": { "composite": true }
+}
+
