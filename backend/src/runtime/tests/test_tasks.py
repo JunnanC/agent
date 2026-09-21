@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import unittest
 
-from runtime.extend.enums import CompensationFailureStage, CompensationStatus
-from runtime.extend.tasks import InlineTaskBroker, RetryPolicy, WorkerTaskRequest
+from runtime.enums import CompensationFailureStage, CompensationStatus
+from runtime.tasks import InlineTaskBroker, RetryPolicy, WorkerTaskRequest
 
 
 class CeleryPolicyTests(unittest.TestCase):

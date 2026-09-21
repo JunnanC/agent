@@ -1,4 +1,4 @@
-"""SSE event object and canonical M3 event dictionary."""
+"""Shared Server-Sent Events wire object."""
 
 from __future__ import annotations
 
@@ -9,38 +9,7 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID, uuid4
 
-from .enums import InstanceStatus
-
-
-class SSEEventType(StrEnum):
-    PROVISIONING_STEP_UPDATED = "PROVISIONING_STEP_UPDATED"
-    PROVISIONING_COMPLETED = "PROVISIONING_COMPLETED"
-    PROVISIONING_FAILED = "PROVISIONING_FAILED"
-    PROVISIONING_CANCELLED = "PROVISIONING_CANCELLED"
-    ARCHIVE_STEP_UPDATED = "ARCHIVE_STEP_UPDATED"
-    ARCHIVE_COMPLETED = "ARCHIVE_COMPLETED"
-    ARCHIVE_FAILED = "ARCHIVE_FAILED"
-    DESTROY_STEP_UPDATED = "DESTROY_STEP_UPDATED"
-    DESTROY_COMPLETED = "DESTROY_COMPLETED"
-    INSTANCE_STATE_CHANGED = "INSTANCE_STATE_CHANGED"
-    REVIEW_COMPLETED = "REVIEW_COMPLETED"
-    TASK_WITHDRAWN = "TASK_WITHDRAWN"
-
-
-class SSEStage(StrEnum):
-    IMAGE_PULL = "IMAGE_PULL"
-    MATERIAL_MOUNT = "MATERIAL_MOUNT"
-    DEPENDENCY_RESTORE = "DEPENDENCY_RESTORE"
-    HEALTH_CHECK = "HEALTH_CHECK"
-    CREDENTIAL_ISSUE = "CREDENTIAL_ISSUE"
-    SNAPSHOT = "SNAPSHOT"
-    LOG_COLLECT = "LOG_COLLECT"
-    ARTIFACT_COPY = "ARTIFACT_COPY"
-    MANIFEST_VERIFY = "MANIFEST_VERIFY"
-    SESSION_REVOKE = "SESSION_REVOKE"
-    RUNTIME_STOP = "RUNTIME_STOP"
-    RUNTIME_DESTROY = "RUNTIME_DESTROY"
-    QUOTA_RELEASE = "QUOTA_RELEASE"
+from common.sse.enums import SSEEventType, SSEStage
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,7 +44,7 @@ class SSEEvent:
         assignment_id: int,
         instance_id: int,
         operation_id: str,
-        status: str | InstanceStatus,
+        status: str | StrEnum,
         message: str,
         trace_id: str,
         stage: str | SSEStage | None = None,

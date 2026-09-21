@@ -1,1 +1,0 @@
-"""Cross-cutting API infrastructure."""

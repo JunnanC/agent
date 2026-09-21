@@ -1,7 +1,7 @@
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
-from core.extend.response.success import get_trace_id
+from common.response.success import get_trace_id
 
 
 class StandardPagination(PageNumberPagination):

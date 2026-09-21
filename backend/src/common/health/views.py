@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.views import APIView
 
-from core.extend.response import error_response, success_response
+from common.response import error_response, success_response
 
 
 class LiveHealthView(APIView):

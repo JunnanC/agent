@@ -8,7 +8,7 @@ from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping
 
-from .contracts import (
+from .adapter import (
     RuntimeAccess,
     RuntimeAdapter,
     RuntimeCapabilities,
@@ -170,9 +170,6 @@ class FakeRuntimeAdapter(RuntimeAdapter):
             disk_usage_mib=int(digest[6:10], 16) % 4096,
             process_count=int(digest[10:12], 16) % 100,
         )
-
-
-
 
 
 
