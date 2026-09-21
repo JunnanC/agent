@@ -99,6 +99,43 @@ DATABASES = {
     }
 }
 
+SERVICE_NAME = os.environ.get("SERVICE_NAME", "django")
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "filters": {
+        "redact_sensitive": {
+            "()": "apps.core.logging.SensitiveDataFilter",
+        },
+    },
+    "formatters": {
+        "json": {
+            "()": "apps.core.logging.StructuredJsonFormatter",
+        },
+    },
+    "handlers": {
+        "stdout": {
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stdout",
+            "filters": ["redact_sensitive"],
+            "formatter": "json",
+        },
+    },
+    "root": {
+        "handlers": ["stdout"],
+        "level": LOG_LEVEL,
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["stdout"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+    },
+}
+
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
@@ -112,6 +149,10 @@ SPECTACULAR_SETTINGS = {
         "x-generated-at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
         "x-contract-status": "pending-freeze; replace after contract freeze",
     },
+    "POSTPROCESSING_HOOKS": [
+        "drf_spectacular.hooks.postprocess_schema_enums",
+        "apps.core.schema.add_trace_response_header",
+    ],
 }
 
 CELERY_BROKER_URL = os.environ.get("REDIS_URL", "")

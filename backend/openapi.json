@@ -19,7 +19,15 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Non-JSON text/event-stream response. Generated clients must exclude this operation and use the frontend event-client."
+                        "description": "Non-JSON text/event-stream response. Generated clients must exclude this operation and use the frontend event-client.",
+                        "headers": {
+                            "X-Trace-Id": {
+                                "description": "Trace ID for the current request.",
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -74,7 +82,15 @@
                                 }
                             }
                         },
-                        "description": ""
+                        "description": "",
+                        "headers": {
+                            "X-Trace-Id": {
+                                "description": "Trace ID for the current request.",
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -127,7 +143,15 @@
                                 }
                             }
                         },
-                        "description": ""
+                        "description": "",
+                        "headers": {
+                            "X-Trace-Id": {
+                                "description": "Trace ID for the current request.",
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -180,7 +204,15 @@
                                 }
                             }
                         },
-                        "description": ""
+                        "description": "",
+                        "headers": {
+                            "X-Trace-Id": {
+                                "description": "Trace ID for the current request.",
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -233,7 +265,15 @@
                                 }
                             }
                         },
-                        "description": ""
+                        "description": "",
+                        "headers": {
+                            "X-Trace-Id": {
+                                "description": "Trace ID for the current request.",
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -286,7 +326,15 @@
                                 }
                             }
                         },
-                        "description": ""
+                        "description": "",
+                        "headers": {
+                            "X-Trace-Id": {
+                                "description": "Trace ID for the current request.",
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -312,7 +360,15 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Non-JSON file stream response. Generated clients must exclude this operation and use the returned download URL."
+                        "description": "Non-JSON file stream response. Generated clients must exclude this operation and use the returned download URL.",
+                        "headers": {
+                            "X-Trace-Id": {
+                                "description": "Trace ID for the current request.",
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             }
