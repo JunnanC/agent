@@ -1,0 +1,130 @@
+x-backend-service: &backend-service
+  image: education-experiment-platform-backend:local
+  build:
+    context: ./backend
+  env_file:
+    - ./backend/.env
+  environment:
+    TZ: UTC
+  depends_on:
+    mysql:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    minio:
+      condition: service_healthy
+    minio-init:
+      condition: service_completed_successfully
+
+services:
+  mysql:
+    image: mysql:8.0
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-storage-engine=InnoDB
+      - --default-time-zone=+00:00
+    environment:
+      MYSQL_DATABASE: ${MYSQL_NAME}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      TZ: UTC
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7
+    command: ["redis-server", "--appendonly", "yes"]
+    environment:
+      TZ: UTC
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    image: minio/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+      TZ: UTC
+    ports:
+      - "${MINIO_API_PORT}:9000"
+      - "${MINIO_CONSOLE_PORT}:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_GENERAL_BUCKET: ${MINIO_GENERAL_BUCKET}
+      MINIO_ARCHIVE_BUCKET: ${MINIO_ARCHIVE_BUCKET}
+      MINIO_SNAPSHOT_BUCKET: ${MINIO_SNAPSHOT_BUCKET}
+      MINIO_EXPORT_BUCKET: ${MINIO_EXPORT_BUCKET}
+    entrypoint: >
+      sh -c '
+      mc alias set local http://$$MINIO_ENDPOINT $$MINIO_ACCESS_KEY $$MINIO_SECRET_KEY &&
+      mc mb --ignore-existing local/$$MINIO_GENERAL_BUCKET &&
+      mc mb --ignore-existing local/$$MINIO_ARCHIVE_BUCKET &&
+      mc mb --ignore-existing local/$$MINIO_SNAPSHOT_BUCKET &&
+      mc mb --ignore-existing local/$$MINIO_EXPORT_BUCKET &&
+      mc anonymous set none local/$$MINIO_GENERAL_BUCKET &&
+      mc anonymous set none local/$$MINIO_ARCHIVE_BUCKET &&
+      mc anonymous set none local/$$MINIO_SNAPSHOT_BUCKET &&
+      mc anonymous set none local/$$MINIO_EXPORT_BUCKET
+      '
+
+  api:
+    <<: *backend-service
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000", "--settings=config.settings.dev"]
+    ports:
+      - "${API_PORT}:8000"
+
+  worker:
+    <<: *backend-service
+    command: ["celery", "-A", "config", "worker", "--loglevel=INFO", "-Q", "celery,maintenance,orchestration,agent"]
+
+  beat:
+    <<: *backend-service
+    command: ["celery", "-A", "config", "beat", "--loglevel=INFO"]
+
+  # E3: Fake/Container Adapter service skeleton. Keep disabled until E3 implements it.
+  # adapter:
+  #   build:
+  #     context: ./backend
+  #   command: ["python", "-m", "apps.adapters.container"]
+  #   env_file:
+  #     - ./backend/.env
+  #   depends_on:
+  #     mysql:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     minio:
+  #       condition: service_healthy
+
+volumes:
+  mysql-data:
+  redis-data:
+  minio-data:

@@ -1,0 +1,167 @@
+name: EduTech CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+
+env:
+  PYTHON_VERSION: "3.12"
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ghcr.io/junnanc/agent
+
+jobs:
+  lock-check:
+    name: 依赖锁校验
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.12-slim
+    steps:
+      - uses: actions/checkout@v4
+      - name: 安装系统依赖
+        run: apt-get update && apt-get install -y --no-install-recommends default-libmysqlclient-dev build-essential pkg-config
+      - name: 安装 uv
+        run: pip install --no-cache-dir uv==0.12.17
+      - name: 校验 uv.lock 与 pyproject.toml 一致性
+        working-directory: backend
+        run: |
+          if [ ! -f uv.lock ]; then
+            echo "ERROR: uv.lock 不存在，请先运行 uv lock"
+            exit 1
+          fi
+          uv lock --check
+          echo "OK: uv.lock 与 pyproject.toml 一致"
+
+  lint:
+    name: 代码规范检查
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.12-slim
+    steps:
+      - uses: actions/checkout@v4
+      - name: 安装依赖
+        working-directory: backend
+        run: pip install --no-cache-dir ruff
+      - name: Ruff check
+        working-directory: backend
+        run: ruff check .
+
+  test:
+    name: 单元测试
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.12-slim
+    services:
+      redis:
+        image: redis:7
+    steps:
+      - uses: actions/checkout@v4
+      - name: 安装系统依赖
+        run: apt-get update && apt-get install -y --no-install-recommends default-libmysqlclient-dev build-essential pkg-config
+      - name: 安装 uv
+        run: pip install --no-cache-dir uv==0.12.17
+      - name: 安装项目依赖
+        working-directory: backend
+        run: |
+          uv pip install --system .
+          uv pip install --system ".[dev]"
+          uv pip install --system pytest pytest-django pytest-cov
+      - name: 运行测试
+        working-directory: backend
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.test
+          REDIS_CACHE_URL: redis://redis:6379/0
+          CELERY_BROKER_URL: redis://redis:6379/1
+        run: python -m pytest --tb=short -q
+
+  docker:
+    name: 构建并推送镜像
+    needs: [lock-check, lint, test]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 登录 GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 生成镜像标签
+        id: meta
+        run: |
+          TAG=$(date +%Y%m%d)-${GITHUB_SHA:0:7}
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: 构建并推送镜像
+        run: |
+          docker build \
+            -f backend/Dockerfile.prod \
+            -t ${IMAGE_NAME}:latest \
+            -t ${IMAGE_NAME}:${{ steps.meta.outputs.tag }} \
+            backend/
+          docker push ${IMAGE_NAME}:latest
+          docker push ${IMAGE_NAME}:${{ steps.meta.outputs.tag }}
+          echo "镜像已推送: ${IMAGE_NAME}:${{ steps.meta.outputs.tag }}"
+
+  deploy:
+    name: 部署到服务器
+    needs: [docker]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 配置 SSH 密钥
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+          cat >> ~/.ssh/config << 'EOF'
+          Host *
+            ServerAliveInterval 30
+            ServerAliveCountMax 120
+            ConnectTimeout 10
+          EOF
+          chmod 600 ~/.ssh/config
+
+      - name: 部署到生产环境
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'DEPLOY'
+            set -e
+            echo "=== 同步最新代码 ==="
+            cd /opt/edutech
+            git remote set-url origin https://github.com/JunnanC/agent.git
+            GIT_TERMINAL_PROMPT=0 git fetch origin master
+            git reset --hard origin/master
+
+            echo "=== 拉取最新镜像 ==="
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker pull ghcr.io/junnanc/agent:latest
+
+            echo "=== 收集静态文件 ==="
+            docker run --rm \
+              --env-file backend/.env.prod \
+              -e DJANGO_SETTINGS_MODULE=config.settings.prod \
+              -v "$(pwd)/backend/staticfiles:/app/staticfiles" \
+              ghcr.io/junnanc/agent:latest \
+              python manage.py collectstatic --noinput 2>/dev/null || echo "静态文件收集跳过"
+
+            echo "=== 部署 Swarm Stack ==="
+            BACKEND_IMAGE=ghcr.io/junnanc/agent:latest \
+              docker stack deploy -c docker-compose.prod.yml edutech --prune
+
+            echo "=== 部署完成 ==="
+            docker stack services edutech
+          DEPLOY
+
+      - name: 清理 SSH 密钥
+        if: always()
+        run: rm -f ~/.ssh/id_ed25519
