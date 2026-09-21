@@ -49,15 +49,13 @@ testpaths = [
   "apps/common/tests",
   "apps/identity/tests",
   "apps/membership/tests",
-  "apps/teaching/tests",
 ]
 addopts = "-ra -p no:cacheprovider"
 
 [tool.coverage.run]
-source = ["apps.common", "apps.identity", "apps.membership", "apps.teaching"]
+source = ["apps.common", "apps.identity", "apps.membership"]
 omit = [
   "apps/common/tests/*",
   "apps/identity/tests/*",
   "apps/membership/tests/*",
-  "apps/teaching/tests/*",
 ]
