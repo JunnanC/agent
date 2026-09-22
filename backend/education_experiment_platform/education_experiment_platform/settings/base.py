@@ -93,6 +93,10 @@ REST_FRAMEWORK: dict[str, object] = {
     "EXCEPTION_HANDLER": "education_experiment_platform.api.exception_handler",
     "DEFAULT_AUTHENTICATION_CLASSES": [],
     "DEFAULT_PERMISSION_CLASSES": [],
+    # doc 08 §1.1：接口只返回 application/json。DRF 默认还带 BrowsableAPIRenderer，
+    # 而本工程没有配置 TEMPLATES：浏览器带 Accept: text/html 访问时会
+    # 选中它并报 TemplateDoesNotExist，把一个正常请求变成 500。
+    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "UNAUTHENTICATED_USER": None,
 }
 
