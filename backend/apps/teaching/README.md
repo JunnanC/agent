@@ -115,7 +115,7 @@ with teaching_write(
 - **被拒绝/被阻断**（业务事实本就不成立）：在事务内只写审计（`result="DENIED"`）与必要的快照，**不写业务事实**；把要抛的 `ApiError` 缓存到变量，**退出事务后**再抛，保证审计已提交、不被回滚。
 - **业务写入后失败**：整个事务回滚，业务事实、审计、Outbox 一起回滚（保持「审计与事实同事务」的强一致语义）。此路径不额外在独立事务里补写审计。
 
-`teaching_write()` 对这两种路径都提供支持：`write.deny(reason, error)` 走前者，直接抛异常走后者。
+`teaching_write()` 对这两种路径都提供支持：`write.deny(error, reason=...)` 走前者，直接抛异常走后者。
 
 ### D6 「幂等标记」是否落库（待裁决）
 
@@ -180,7 +180,6 @@ def audit_teaching(
 
 ```python
 def publish_teaching_event(
-    request,
     *,
     event_type: str,
     aggregate_type: str,
@@ -206,7 +205,7 @@ with teaching_write(request=..., action=..., target_type=..., target_id=...) as 
 |---|---|
 | 进入 | 开启 `transaction.atomic()`；捕获 actor、`trace_id`、`request_id` |
 | 正常退出 | 写 `result="SUCCESS"` 审计 → 派发已登记的事件（同事务）→ 提交 |
-| `write.deny(reason, error)` | 只写 `result="DENIED"` 审计；事务提交后抛出 `error`（业务事实不落库） |
+| `write.deny(error, *, reason="")` | 只写 `result="DENIED"` 审计；事务提交后抛出 `error`（业务事实不落库） |
 | 抛异常 | 整体回滚；不补写独立事务审计（见 D5） |
 
 `write` 暴露：`after`（审计 after_json）、`publish(...)`（登记事件）、`deny(...)`。
@@ -216,6 +215,7 @@ with teaching_write(request=..., action=..., target_type=..., target_id=...) as 
 ```python
 class TeachingPortalPermission(PortalPermission):
     required_portals = frozenset({TEACHING_PORTAL})
+
 
 def require_teaching_actor(request) -> str: ...
 ```
@@ -261,7 +261,7 @@ python scripts\check-contracts.py
 ```
 
 1. `manage.py check` 无 issue；
-2. `ruff check .` 与 `ruff format --check` 全绿（doc 06 §7.6 质量门禁）；
+2. `ruff check .` 全绿；`ruff format --check apps/teaching` 全绿（本切片全部文件已格式化）。注意：`ruff format --check .` 在 master 上对 15 个既有文件本来就为 red（非本切片引入，属队友文件），本地验证以切片目录为准（doc 06 §7.6 质量门禁）；
 3. `pytest -q` 现有用例全部通过，无回归；
 4. `scripts/check-contracts.py` 六类检查全部 PASS，`FAIL=0`：路由不重复 / 不遮蔽、错误码唯一、业务模型全 `managed=False`、`apps/*/migrations/` 无迁移文件、Celery 队列与任务路由一致、compose 队列一致。
 
