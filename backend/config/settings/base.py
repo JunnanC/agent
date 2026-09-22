@@ -18,6 +18,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "drf_spectacular",
+    "apps.core",
     "apps.common",
     "apps.identity",
     "apps.membership",

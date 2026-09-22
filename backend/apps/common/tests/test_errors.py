@@ -29,8 +29,9 @@ def test_error_response_uses_numeric_code() -> None:
         reset_context(token)
 
     assert response.status_code == 400
-    assert payload["code"] == 40004
-    assert payload["request_id"] == "request-id"
+    assert payload["data"] is None
+    assert payload["error"]["code"] == 40004
+    assert payload["meta"]["request_id"] == "request-id"
 
 
 def test_unknown_exception_returns_internal_error() -> None:
@@ -42,5 +43,6 @@ def test_unknown_exception_returns_internal_error() -> None:
         reset_context(token)
 
     assert response.status_code == 500
-    assert payload["code"] == 50001
+    assert payload["data"] is None
+    assert payload["error"]["code"] == 50001
     assert "secret-token" not in response.content.decode()

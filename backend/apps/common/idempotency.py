@@ -81,6 +81,16 @@ def _record_key(scope: str, user_id: str | None, idempotency_key: str) -> str:
     return f"idempotency:{user_id or 'anonymous'}:{scope}:{idempotency_key}"
 
 
+def _record_identity(request: HttpRequest, user_id: str | None) -> str | None:
+    """Keep replay identity stable even when the operation revokes a token."""
+    authorization = request.headers.get("Authorization", "")
+    if authorization:
+        return f"token:{hashlib.sha256(authorization.encode('utf-8')).hexdigest()}"
+    if user_id:
+        return user_id
+    return None
+
+
 def _response_body(response: HttpResponse) -> str:
     if hasattr(response, "render") and callable(getattr(response, "render", None)):
         response.render()
@@ -116,8 +126,9 @@ def idempotent(scope: str) -> Callable[[ViewFunc], ViewFunc]:
 
             idempotency_key = _idempotency_key(request)
             user_id = actor_identifier(request)
-            digest = _request_digest(request, scope, user_id)
-            key = _record_key(scope, user_id, idempotency_key)
+            record_identity = _record_identity(request, user_id)
+            digest = _request_digest(request, scope, record_identity)
+            key = _record_key(scope, record_identity, idempotency_key)
             client = redis_client()
             result = client.eval(
                 _ACQUIRE_SCRIPT,

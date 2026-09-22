@@ -42,6 +42,7 @@ quote-style = "double"
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings.test"
 testpaths = [
+  "apps/core/tests",
   "apps/common/tests",
   "apps/identity/tests",
   "apps/membership/tests",
@@ -50,8 +51,9 @@ testpaths = [
 addopts = "-ra -p no:cacheprovider"
 
 [tool.coverage.run]
-source = ["apps.common", "apps.identity", "apps.membership"]
+source = ["apps.core", "apps.common", "apps.identity", "apps.membership"]
 omit = [
+  "apps/core/tests/*",
   "apps/common/tests/*",
   "apps/identity/tests/*",
   "apps/membership/tests/*",

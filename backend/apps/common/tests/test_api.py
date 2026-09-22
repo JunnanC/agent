@@ -93,9 +93,9 @@ def test_health_endpoint_and_generated_request_id(monkeypatch: pytest.MonkeyPatc
     request_id = response.headers["X-Request-ID"]
 
     assert response.status_code == 200
-    assert payload["code"] == 0
     assert payload["data"]["ok"] is True
-    assert payload["request_id"] == request_id
+    assert payload["meta"]["request_id"] == request_id
+    assert payload["error"] is None
     uuid.UUID(request_id)
 
 
@@ -106,7 +106,7 @@ def test_request_id_is_passed_through(monkeypatch: pytest.MonkeyPatch) -> None:
     payload = json.loads(response.content)
 
     assert response.headers["X-Request-ID"] == "request-id"
-    assert payload["request_id"] == "request-id"
+    assert payload["meta"]["request_id"] == "request-id"
 
 
 @override_settings(COMMON_AUDITABLE_ACTOR_PROVIDER="apps.common.tests.providers.UserActorProvider")
@@ -115,7 +115,7 @@ def test_non_system_admin_receives_numeric_forbidden(common_tables: None) -> Non
     payload = json.loads(response.content)
 
     assert response.status_code == FORBIDDEN.http_status
-    assert payload["code"] == FORBIDDEN.code
+    assert payload["error"]["code"] == FORBIDDEN.code
     assert "<html" not in response.content.decode().lower()
 
 
@@ -136,13 +136,12 @@ def test_audit_list_filters_and_paginates(common_tables: None) -> None:
     data = payload["data"]
 
     assert response.status_code == 200
-    assert payload["code"] == 0
     assert data["page"] == 2
     assert data["page_size"] == 1
     assert data["total"] == 2
     assert len(data["items"]) == 1
     assert data["items"][0]["target_id"] == "first"
-    assert payload["request_id"] == "request-id"
+    assert payload["meta"]["request_id"] == "request-id"
 
 
 @override_settings(
@@ -170,9 +169,8 @@ def test_audit_export_returns_accepted_and_status(
     operation_id = payload["data"]["operation_id"]
 
     assert response.status_code == 202
-    assert payload["code"] == 0
     assert payload["data"]["status"] == "ACCEPTED"
-    assert payload["data"]["trace_id"]
+    assert payload["meta"]["trace_id"]
     assert payload["data"]["estimated_records"] == 1
 
     status_response = Client().get(
@@ -230,7 +228,7 @@ def test_audit_export_requires_filter(common_tables: None, monkeypatch: pytest.M
     payload = json.loads(response.content)
 
     assert response.status_code == EMPTY_FILTER.http_status
-    assert payload["code"] == EMPTY_FILTER.code
+    assert payload["error"]["code"] == EMPTY_FILTER.code
 
 
 @override_settings(
@@ -254,7 +252,7 @@ def test_audit_export_rejects_too_many_records(
     payload = json.loads(response.content)
 
     assert response.status_code == AUDIT_EXPORT_TOO_LARGE.http_status
-    assert payload["code"] == AUDIT_EXPORT_TOO_LARGE.code
+    assert payload["error"]["code"] == AUDIT_EXPORT_TOO_LARGE.code
 
 
 @override_settings(
@@ -268,7 +266,7 @@ def test_audit_export_status_returns_not_found(monkeypatch: pytest.MonkeyPatch) 
     payload = json.loads(response.content)
 
     assert response.status_code == RESOURCE_NOT_FOUND.http_status
-    assert payload["code"] == RESOURCE_NOT_FOUND.code
+    assert payload["error"]["code"] == RESOURCE_NOT_FOUND.code
 
 
 def test_unexpected_error_returns_json_envelope(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -279,7 +277,7 @@ def test_unexpected_error_returns_json_envelope(monkeypatch: pytest.MonkeyPatch)
     content = response.content.decode()
 
     assert response.status_code == INTERNAL_ERROR.http_status
-    assert payload["code"] == INTERNAL_ERROR.code
+    assert payload["error"]["code"] == INTERNAL_ERROR.code
     assert response.headers["Content-Type"].startswith("application/json")
     assert "Traceback" not in content
     assert "<html" not in content.lower()
