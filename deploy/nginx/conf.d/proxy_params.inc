@@ -1,5 +1,6 @@
 # 通用代理参数 —— 被 nginx.conf 通过 include 引用
 proxy_set_header Host              $host;
+proxy_set_header X-Portal          $portal;
 proxy_set_header X-Real-IP         $remote_addr;
 proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
 proxy_set_header X-Forwarded-Proto $scheme;

@@ -1,5 +1,33 @@
 # agent
 
+## 当前集成状态
+
+项目设计依据为本地 `documents/Guideline/v2/`，HTTP 接口统一使用 `/api/v1/`。本次收尾保留主干 `backend/config` 与 `backend/apps` 结构，将 Portal、健康探针、OpenAPI、RuntimeAdapter/Fake、SSE 和重试策略接入主干；不再维护 `backend/src` 或独立 `requirements.txt`。
+
+新增基础能力：
+
+- `apps.common.portal`：`USER / TEACHING / PLATFORM` 入口识别与可信代理校验。
+- `apps.common.probes`：`/health/live`、`/health/ready` 和受保护的 `/api/v1/platform/health`。
+- `apps.runtime`：RuntimeAdapter、Fake 实现、实例状态与重试/人工补偿策略。
+- `apps.common.sse`：SSE 事件对象与编码工具。
+- `/api/v1/schema/`、`/api/v1/docs/`、`/api/v1/redoc/`：OpenAPI 规范入口，需平台管理员凭据。
+
+现有身份和成员接口继续兼容；课程化领域、Portal Session/CSRF 完整迁移按 `documents/Guideline/v2` 后续纵切实施，本次 PR 不宣称这些业务已完成。OpenAPI 导出对主干旧 APIView 仅有 serializer 推断提示，不影响规范生成。
+
+## 当前集成状态
+
+项目设计依据为本地 `documents/Guideline/v2/`，HTTP 接口统一使用 `/api/v1/`。本次收尾保留主干 `backend/config` 与 `backend/apps` 结构，将 Portal、健康探针、OpenAPI、RuntimeAdapter/Fake、SSE 和重试策略接入主干；不再维护 `backend/src` 或独立 `requirements.txt`。
+
+新增基础能力：
+
+- `apps.common.portal`：`USER / TEACHING / PLATFORM` 入口识别与可信代理校验。
+- `apps.common.probes`：`/health/live`、`/health/ready` 和受保护的 `/api/v1/platform/health`。
+- `apps.runtime`：RuntimeAdapter、Fake 实现、实例状态与重试/人工补偿策略。
+- `apps.common.sse`：SSE 事件对象与编码工具。
+- `/api/v1/schema/`、`/api/v1/docs/`、`/api/v1/redoc/`：OpenAPI 规范入口，需平台管理员凭据。
+
+现有身份和成员接口继续兼容；课程化领域、Portal Session/CSRF 完整迁移按 `documents/Guideline/v2` 后续纵切实施，本次 PR 不宣称这些业务已完成。
+
 ## common 模块
 
 `backend/apps/common` 是 M1~M6 共用的横切底座，只提供可脱离业务复用的基础能力，不导入、不实现、不耦合任何业务模块。数据库模型均映射 V4.0 冻结表，并使用 `managed = False`；本阶段禁止生成 migration。

@@ -116,3 +116,29 @@ Any newly added environment variable must be added to this table and the matchin
 - The historical Django `SECRET_KEY` is treated as compromised. It has been rotated, and current settings require `DJANGO_SECRET_KEY` from the environment.
 - The legacy `db.sqlite3` is removed from Git tracking; the file remains ignored and must not be used in production.
 - History is intentionally not rewritten. Shared branches stay stable, and local clones may retain historical content.
+
+
+## Portal 与新增基础能力（2026-09-21 集成）
+
+设计依据：本地 `documents/Guideline/v2/`；HTTP API 使用 `/api/v1/`。现有根路径身份/管理接口及 `/api/v1/me/*`、`/api/v1/teaching/*` 成员接口保留兼容，不在本次收尾中迁移课程或认证模型。新接口使用文档中的 `data/meta` 与 `error` 信封；旧接口信封不变。Portal 只识别入口，不替代业务身份、成员和对象权限。
+
+- 开发入口：`python manage.py runserver`；本地 `backend/.env` 自动加载，但不会覆盖已注入的环境变量。生产和测试不读取该文件。
+- 依赖：`uv sync --python 3.12 --locked`，包括 Runtime 与其测试。旧 `requirements.txt` 已并入 `pyproject.toml`。
+- 存活探针：`GET /health/live`；就绪探针：`GET /health/ready`，数据库不可用返回 503。
+- 管理健康：`GET /api/v1/platform/health`，需要有效 SYSTEM_ADMIN Bearer token 与 PLATFORM 门户，复用现有 identity 鉴权。
+- Portal 取自 `PORTAL_HOST_MAP`。本地按 Host 识别；冲突的客户端 `X-Portal` 被拒绝。生产要求可信代理与匹配的头；nginx 根据 Host 覆盖 `X-Portal`，不透传客户端值。
+- 生产 Swarm 通过 `PORTAL_TRUSTED_PROXY_HOSTS=nginx,tasks.nginx` 解析网关内部地址（每次请求重新解析以适应滚动更新）；也可配置精确 `PORTAL_TRUSTED_PROXY_IPS`。API 不开放公网端口。自定义部署必须同步网关 Host 映射、Django ALLOWED_HOSTS 与 PORTAL_HOST_MAP；未知入口失败关闭。
+- 现有单站部署 Host 继续映射 USER；教师/管理员站点分别映射 TEACHING/PLATFORM。这不会赋予教师或管理员角色，账号权限仍独立校验。
+- `/api/v1/schema/`、`/api/v1/docs/`、`/api/v1/redoc/` 默认只允许 PLATFORM + SYSTEM_ADMIN；命令行导出不需要在线登录。
+
+导出规范（使用受控环境；本地测试可指定 `--settings=config.settings.test`）：
+
+```powershell
+uv run python manage.py spectacular --file artifacts/openapi/openapi.json --format openapi-json --validate
+uv run python -m pytest -q
+uv run ruff check .
+```
+
+RuntimeAdapter/Fake、SSE 编码与重试策略是已可测试的基础能力；真实运行时、事件流路由、课程化数据库与 Portal 绑定 Session 尚需后续纵切实现。现有业务模型迁移策略不在本 PR 变更。
+
+新增依赖 `python-dotenv>=1.1,<2` 用于本地环境配置，BSD-3-Clause，来源 PyPI；具体版本与哈希见 `uv.lock`。依赖漏洞检查结果记录在 PR 验证项。

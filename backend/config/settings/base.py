@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from kombu import Queue
 
-from config.env import ENV
+from config.env import ENV, ConfigurationError, optional_bool
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -21,12 +22,14 @@ INSTALLED_APPS = [
     "apps.identity",
     "apps.membership",
     "apps.teaching",
+    "apps.runtime",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "apps.common.middleware.RequestTraceMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "apps.common.portal.middleware.PortalContextMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -122,3 +125,32 @@ COMMON_IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60
 COMMON_OUTBOX_BATCH_SIZE = 100
 COMMON_AUDIT_EXPORT_MAX_RECORDS = 100_000
 COMMON_AUDIT_EXPORT_TTL_SECONDS = 24 * 60 * 60
+
+# Host selects the portal; a browser-supplied X-Portal never overrides it.
+PORTAL_TRUST_PROXY_ENABLED = optional_bool("PORTAL_TRUST_PROXY_ENABLED", False)
+PORTAL_TRUSTED_PROXY_IPS = set(os.getenv("PORTAL_TRUSTED_PROXY_IPS", "127.0.0.1,::1").split(","))
+PORTAL_TRUSTED_PROXY_HOSTS = [
+    host.strip() for host in os.getenv("PORTAL_TRUSTED_PROXY_HOSTS", "").split(",") if host.strip()
+]
+PORTAL_HOST_MAP = {}
+for _mapping in os.getenv(
+    "PORTAL_HOST_MAP",
+    "localhost=USER,127.0.0.1=USER,user.example.edu=USER,"
+    "teacher.example.edu=TEACHING,admin.example.edu=PLATFORM",
+).split(","):
+    _host, _separator, _portal = _mapping.partition("=")
+    if not _separator or not _host.strip() or _portal.strip().upper() not in {
+        "USER", "TEACHING", "PLATFORM"
+    }:
+        raise ConfigurationError("PORTAL_HOST_MAP contains an invalid mapping")
+    PORTAL_HOST_MAP[_host.strip().lower()] = _portal.strip().upper()
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": os.getenv("OPENAPI_TITLE", "Agent Virtual Lab API"),
+    "VERSION": "1.0.0",
+    "OAS_VERSION": "3.0.3",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SERVE_AUTHENTICATION": [],
+    "SERVE_PERMISSIONS": ["apps.common.portal.permissions.PlatformPortalAdminPermission"],
+    "SCHEMA_PATH_PREFIX": r"/api/v1",
+}

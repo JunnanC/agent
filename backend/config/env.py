@@ -2,7 +2,14 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from urllib.parse import urlparse
+
+from dotenv import load_dotenv
+
+# Production secrets/process environment take precedence. Tests never load local credentials.
+if os.environ.get("DJANGO_SETTINGS_MODULE", "config.settings.dev") == "config.settings.dev":
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=False)
 
 
 class ConfigurationError(RuntimeError):

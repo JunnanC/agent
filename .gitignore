@@ -42,3 +42,7 @@ data/
 *.swp
 .DS_Store
 Thumbs.db
+
+# Local project instructions and authoritative working documents
+/AGENTS.md
+/documents/

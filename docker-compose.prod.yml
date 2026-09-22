@@ -11,7 +11,10 @@ x-backend-env: &backend-env
   environment:
     DJANGO_SETTINGS_MODULE: config.settings.prod
     DJANGO_DEBUG: "false"
-    DJANGO_ALLOWED_HOSTS: "47.114.40.7,localhost"
+    DJANGO_ALLOWED_HOSTS: "${DJANGO_ALLOWED_HOSTS:-47.114.40.7,localhost,user.example.edu,teacher.example.edu,admin.example.edu}"
+    PORTAL_TRUST_PROXY_ENABLED: "true"
+    PORTAL_TRUSTED_PROXY_HOSTS: "nginx,tasks.nginx"
+    PORTAL_HOST_MAP: "${PORTAL_HOST_MAP:-47.114.40.7=USER,localhost=USER,user.example.edu=USER,teacher.example.edu=TEACHING,admin.example.edu=PLATFORM}"
     MYSQL_HOST: mysql8
     MYSQL_PORT: "3306"
     MYSQL_NAME: edutech

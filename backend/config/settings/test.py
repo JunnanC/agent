@@ -42,3 +42,5 @@ CACHES = {
     }
 }
 CELERY_TASK_ALWAYS_EAGER = True
+PORTAL_TRUST_PROXY_ENABLED = False
+PORTAL_HOST_MAP = {"testserver": "USER"}
