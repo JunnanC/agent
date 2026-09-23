@@ -12,15 +12,21 @@
 - Django does not own the database schema and must not generate migrations in this phase.
 - The image build defaults to the Tsinghua Debian mirror because the official Debian mirror is unstable in the local network. Override `DEBIAN_MIRROR_URL` at build time if another mirror is required.
 
-## common module
+## common and core modules
 
-`apps/common` is the cross-cutting foundation for later modules. It contains no business semantics and must not import business apps. `OutboxEvent` and `AuditLog` map the frozen V4.0 tables with `managed = False`; do not generate migrations for them.
+`apps/core` owns stable cross-module contracts and invariants: the single `data/meta/error` response envelope, the master error catalogue, validated pagination, Versioned/CAS and AppendOnly primitives, masking policy, audit facts, and transactional Outbox facts. It must not import business apps.
+
+`apps/common` owns framework adapters and compatibility utilities: request context/middleware, logging, storage, SSE, providers, idempotency and health endpoints. Existing `apps.common.*` imports remain supported while callers migrate to `apps.core.*`; no business module should depend on implementation details in another business app. `OutboxEvent` and `AuditLog` map the frozen tables with `managed = False`; do not generate migrations for them.
 
 ### Responses and errors
 
-Use `apps.common.responses.success`, `paginated`, and `accepted` for success envelopes. Success `code` is integer `0`; every response contains `request_id`.
+Use `apps.core.response.schema` (or its `apps.common` compatibility exports) for success, paginated, accepted, and error envelopes. Every JSON response has exactly `data`, `meta`, and `error` top-level keys; successful responses set `error` to `null`, failed responses set `data` to `null`. `request_id` and `trace_id` are in `meta`.
 
-Raise `apps.common.errors.ApiError` with an `ErrorCode` constant. Error responses expose the numeric `code`, HTTP status, message, details, and `request_id`; symbol names remain internal only. Unknown exceptions are converted to `50001` without a stack trace or HTML error page.
+Raise `apps.core.errors.ApiError` with a master `ErrorCode` constant (the `apps.common.errors` path remains a compatibility export). Error responses expose the existing numeric code, message, details, trace ID, and retryable flag; unknown exceptions are converted to `50001` without a stack trace or HTML error page.
+
+### Versioned and AppendOnly
+
+Use `apps.core.versioning` for mutable aggregates: compare `row_version`/revision or `If-Match` before a write, then increment the version inside the same transaction. Use `apps.core.append_only` for historical facts such as audit, Outbox, transitions, report versions, and review decisions: append a new fact and never update or delete the old one. A current-state Versioned row and its AppendOnly history may coexist; they serve different purposes.
 
 ### Request context, logging, and pagination
 

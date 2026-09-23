@@ -1,61 +1,15 @@
 from __future__ import annotations
 
+"""Logging adapter; masking policy lives in :mod:`apps.core.masking`."""
+
 import json
 import logging
-import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from typing import Any
 
+from apps.core.masking import MASK, SENSITIVE_KEYS, mask_sensitive
+
 from .context import current_context_or_none
-
-MASK = "***"
-SENSITIVE_KEYS = {
-    "password",
-    "passwd",
-    "token",
-    "accesstoken",
-    "refreshtoken",
-    "authorization",
-    "cookie",
-    "apikey",
-    "apisecret",
-    "secretkey",
-    "clientsecret",
-}
-_BEARER_PATTERN = re.compile(r"(?i)(bearer\s+)[a-z0-9._~+/=-]+")
-_API_KEY_PATTERN = re.compile(r"(?i)(api[_-]?key\s*[=:]\s*)[^\s,;]+")
-_COOKIE_PATTERN = re.compile(r"(?i)(cookie\s*[=:]\s*)[^\r\n]+")
-_SENSITIVE_ASSIGNMENT_PATTERN = re.compile(
-    r"(?i)\b(password|passwd|token|authorization|cookie|api[_-]?key|secret)\s*[=:]\s*[^\s,;]+"
-)
-_SECRET_VALUE_PATTERN = re.compile(r"(?i)\b[a-z0-9._~+-]*secret[a-z0-9._~+-]*\b")
-
-
-def _normalize_key(key: str) -> str:
-    return "".join(character for character in key.lower() if character.isalnum())
-
-
-def _mask_string(value: str) -> str:
-    masked = _BEARER_PATTERN.sub(lambda match: match.group(1) + MASK, value)
-    masked = _API_KEY_PATTERN.sub(lambda match: match.group(1) + MASK, masked)
-    masked = _COOKIE_PATTERN.sub(lambda match: match.group(1) + MASK, masked)
-    masked = re.sub(r"(?i)(session\s*[=:]\s*)[^\s,;]+", lambda match: match.group(1) + MASK, masked)
-    masked = _SENSITIVE_ASSIGNMENT_PATTERN.sub(lambda match: match.group(1) + "=" + MASK, masked)
-    masked = _SECRET_VALUE_PATTERN.sub(MASK, masked)
-    return masked
-
-
-def mask_sensitive(value: Any) -> Any:
-    if isinstance(value, Mapping):
-        return {
-            key: MASK if _normalize_key(str(key)) in SENSITIVE_KEYS else mask_sensitive(item)
-            for key, item in value.items()
-        }
-    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
-        return [mask_sensitive(item) for item in value]
-    if isinstance(value, str):
-        return _mask_string(value)
-    return value
 
 
 class JSONFormatter(logging.Formatter):
@@ -92,8 +46,7 @@ def json_log(action: str, *, level: int = logging.INFO, **fields: Any) -> None:
         "user_id": context.user_id if context else None,
         "action": action,
     }
-    logger.log(
-        level,
-        action,
-        extra={"common_fields": mask_sensitive(payload)},
-    )
+    logger.log(level, action, extra={"common_fields": mask_sensitive(payload)})
+
+
+__all__ = ["MASK", "SENSITIVE_KEYS", "JSONFormatter", "json_log", "mask_sensitive"]

@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 
 from apps.common.portal.permissions import PlatformPortalAdminPermission
 from apps.common.response import error_response, success_response
+from apps.core.errors import DEPENDENCY_UNAVAILABLE
 
 from .serializers import HealthResponseSerializer
 
@@ -39,7 +40,7 @@ class ReadyHealthView(LiveHealthView):
                 cursor.fetchone()
         except DatabaseError:
             return error_response(
-                code="SERVICE_NOT_READY",
+                code=DEPENDENCY_UNAVAILABLE.code,
                 message="服务尚未就绪",
                 request=request,
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -47,7 +48,8 @@ class ReadyHealthView(LiveHealthView):
                 retryable=True,
             )
         return success_response(
-            {"status": "ok", "checks": {"database": "ok"}}, request,
+            {"status": "ok", "checks": {"database": "ok"}},
+            request,
         )
 
 

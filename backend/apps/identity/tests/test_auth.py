@@ -36,7 +36,7 @@ def test_login_success_and_wrong_password_do_not_reveal_account(
     assert success.json()["data"]["access_token"]
     assert success.json()["data"]["user"]["membership_status"] == "ACTIVE"
     assert failure.status_code == wrong_password.status_code == UNAUTHENTICATED.http_status
-    assert failure.json()["message"] == wrong_password.json()["message"]
+    assert failure.json()["error"]["message"] == wrong_password.json()["error"]["message"]
 
 
 def test_refresh_rotates_token_and_replay_revokes_sessions(

@@ -124,4 +124,4 @@ def test_non_user_cannot_apply(
     )
 
     assert response.status_code == 403
-    assert response.json()["code"] == 40301
+    assert response.json()["error"]["code"] == 40301

@@ -108,4 +108,4 @@ def test_org_sub_admin_cannot_review_under_c8(
     )
 
     assert response.status_code == 403
-    assert response.json()["code"] == 40301
+    assert response.json()["error"]["code"] == 40301

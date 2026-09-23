@@ -93,7 +93,7 @@ def test_idempotent_request_rejects_different_digest(
 
     assert calls == 1
     assert response.status_code == 409
-    assert payload["code"] == IDEMPOTENCY_CONFLICT.code
+    assert payload["error"]["code"] == IDEMPOTENCY_CONFLICT.code
 
 
 def test_idempotent_request_replays_error(monkeypatch: pytest.MonkeyPatch) -> None:
