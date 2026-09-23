@@ -1,25 +1,5 @@
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.response import Response
+"""Compatibility export for the core DRF pagination adapter."""
 
-from apps.common.response.success import get_trace_id
+from apps.core.response.pagination import StandardPagination
 
-
-class StandardPagination(PageNumberPagination):
-    """Return the page metadata required by the API list envelope."""
-
-    page_size = 20
-    page_size_query_param = "page_size"
-    max_page_size = 100
-
-    def get_paginated_response(self, data):
-        return Response(
-            {
-                "data": data,
-                "meta": {
-                    "page": self.page.number,
-                    "page_size": self.get_page_size(self.request),
-                    "total": self.page.paginator.count,
-                    "trace_id": get_trace_id(self.request),
-                },
-            }
-        )
+__all__ = ["StandardPagination"]
