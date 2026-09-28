@@ -98,6 +98,7 @@ class CompensationStatus(StrEnum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     SUCCEEDED = "SUCCEEDED"
+    DEAD = "DEAD"
     FAILED = "FAILED"
     MANUAL = "MANUAL"
     RESOLVED = "RESOLVED"
