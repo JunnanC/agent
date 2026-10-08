@@ -31,8 +31,8 @@ x-backend-secrets: &backend-secrets
   secrets:
     - django_secret_key
     - mysql_password
-    - redis_cache_url
-    - celery_broker_url
+    - redis_cache_url_v2
+    - celery_broker_url_v2
     - minio_access_key
     - minio_secret_key
 
@@ -116,6 +116,18 @@ services:
   #     replicas: 1
 
   # ── MinIO 对象存储 ──────────────────────────────────────
+
+  # ── WebSocket 入口（Daphne ASGI）──────────────────────
+  ws:
+    <<: [*backend-image, *backend-env, *backend-deploy, *backend-secrets, *backend-entrypoint]
+    command: ["daphne", "-b", "0.0.0.0", "-p", "9000", "config.asgi:application"]
+    healthcheck:
+      disable: true
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 256M
   minio:
     image: quay.io/minio/minio:latest
     command: ["server", "/data", "--console-address", ":9001"]
@@ -192,9 +204,9 @@ secrets:
     external: true
   mysql_password:
     external: true
-  redis_cache_url:
+  redis_cache_url_v2:
     external: true
-  celery_broker_url:
+  celery_broker_url_v2:
     external: true
   minio_access_key:
     external: true
